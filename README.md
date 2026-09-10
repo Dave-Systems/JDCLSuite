@@ -1,7 +1,5 @@
 # JDCLSuite
 
-That's a baseball.
-
 This repository contains the current **Mario Super Sluggers (NTSC-U, `RMBE01`)** setup snapshot from Dolphin. Snapshot generated **2026-09-10T18:01:06Z**.
 
 ## Downloads
