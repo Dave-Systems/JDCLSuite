@@ -1,0 +1,5 @@
+*.md text eol=lf
+*.txt text eol=lf
+Dolphin/GameSettings/RMBE01.ini text eol=lf
+Dolphin/Wii/title/00010000/524d4245/data/gamedata binary
+Dolphin/Wii/shared2/menu/FaceLib/RFL_DB.dat binary
