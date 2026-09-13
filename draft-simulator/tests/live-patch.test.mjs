@@ -1,6 +1,13 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {loadLivePatch} from '../dist/live-patch.js';
+import {newestParPatchName} from '../dist/parpatch.js';
+
+test('newest ParPatchv*.txt is chosen by numeric name',()=>{
+  assert.equal(newestParPatchName(['ParPatchv112.txt','ParPatchv113.txt','Other.txt']),'ParPatchv113.txt');
+  assert.equal(newestParPatchName(['ParPatchv1.13.txt','ParPatchv112.txt']),'ParPatchv112.txt');
+  assert.equal(newestParPatchName(['notes.txt']),null);
+});
 
 test('local loader reads live endpoint with no-store and returns text without applying it',async()=>{
   const originalFetch=globalThis.fetch,originalLocation=globalThis.location;

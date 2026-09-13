@@ -6,10 +6,12 @@ import {createDraft,currentTurn,pickPlayer,teamChemistry,undoPick} from '../dist
 import {createDraftExport,formatDraftExport} from '../dist/export.js';
 import {chemistryLinks,emptyFilters,filterPlayers} from '../dist/pool.js';
 
+import {readNewestParPatch} from './support/parpatch.mjs';
+
 const json=path=>JSON.parse(readFileSync(new URL(path,import.meta.url)));
 const model=createModel(json('../dist/data/baseline.json'),json('../dist/data/schema.json'));
 const vanilla=model.vanilla;
-const patched=model.apply(readFileSync(new URL('./fixtures/ParPatchv113.txt',import.meta.url),'utf8')).roster;
+const patched=model.apply(readNewestParPatch(new URL('./fixtures/',import.meta.url)).text).roster;
 const slot=name=>vanilla.find(p=>p.name===name).id;
 const characters=vanilla.filter(p=>p.playable&&p.kind!=='mii').map(p=>p.id);
 const miis=vanilla.filter(p=>p.kind==='mii').map(p=>p.id);

@@ -2,6 +2,7 @@ import http from 'node:http';
 import { readFile, readdir, stat } from 'node:fs/promises';
 import { resolve, extname, sep } from 'node:path';
 import { fileURLToPath } from 'node:url';
+import { newestParPatchName } from './dist/parpatch.js';
 
 const root = fileURLToPath(new URL('./dist/', import.meta.url));
 const patchRoot = fileURLToPath(new URL('../Stat-Editor/Gecko-Codes/', import.meta.url));
@@ -11,9 +12,8 @@ const server = http.createServer(async (req, res) => {
     const pathname = decodeURIComponent(new URL(req.url, 'http://localhost').pathname);
     if(pathname === '/api/parpatch') {
       try {
-        const files = (await readdir(patchRoot)).filter(name=>/^ParPatchv[\d.]+\.txt$/i.test(name)).sort((a,b)=>b.localeCompare(a,undefined,{numeric:true}));
-        if(!files.length) throw new Error('No ParPatch file found in JDCLSuite/Stat-Editor/Gecko-Codes.');
-        const filename = files[0];
+        const filename = newestParPatchName(await readdir(patchRoot));
+        if(!filename) throw new Error('No ParPatch file found in JDCLSuite/Stat-Editor/Gecko-Codes.');
         const path = resolve(patchRoot,filename);
         const [code,info] = await Promise.all([readFile(path,'utf8'),stat(path)]);
         res.writeHead(200,{'Content-Type':'application/json','Cache-Control':'no-store'}).end(JSON.stringify({code,filename,source:'local',sourceLabel:'Live JDCLSuite working copy',sourcePath:`JDCLSuite/Stat-Editor/Gecko-Codes/${filename}`,updatedAt:info.mtime.toISOString()}));

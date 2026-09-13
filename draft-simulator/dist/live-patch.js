@@ -1,3 +1,4 @@
+import {newestParPatchName} from './parpatch.js';
 const repoPath = 'Dave-Systems/JDCLSuite';
 const folder = 'Stat-Editor/Gecko-Codes';
 async function get(url,kind='json') {
@@ -26,9 +27,10 @@ export async function loadLivePatch() {
   }
   const contents=await get(`https://api.github.com/repos/${repoPath}/contents/${folder}?ref=main&_=${Date.now()}`);
   if(!Array.isArray(contents)) throw new Error('JDCLSuite did not return its Gecko Code folder.');
-  const files=contents.filter(f=>f.type==='file'&&/^ParPatchv[\d.]+\.txt$/i.test(f.name)).sort((a,b)=>b.name.localeCompare(a.name,undefined,{numeric:true}));
-  if(!files.length) throw new Error('No ParPatch text file was found in the live JDCLSuite repository.');
-  const {name:filename,sha}=files[0];
+  const filename=newestParPatchName(contents.filter(f=>f.type==='file').map(f=>f.name));
+  const file=contents.find(f=>f.name===filename);
+  if(!file) throw new Error('No ParPatch text file was found in the live JDCLSuite repository.');
+  const {sha}=file;
   // raw.githubusercontent.com caches by path for minutes, so read the listed blob by hash instead.
   const blob=await get(`https://api.github.com/repos/${repoPath}/git/blobs/${encodeURIComponent(sha)}`);
   if(blob.encoding!=='base64'||typeof blob.content!=='string') throw new Error('JDCLSuite returned the ParPatch in an unexpected format.');
