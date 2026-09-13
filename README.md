@@ -1,6 +1,6 @@
 # JDCLSuite
 
-This repository is the **Jimmy Draft Co League (JDCL)** setup for **Mario Super Sluggers (NTSC-U, `RMBE01`)**. It is a snapshot of bits aggregated from various contributors in Discord, plus JDCL's draft room and league compiler.
+This repository is the **Jimmy Draft Co League (JDCL)** setup for **Mario Super Sluggers (NTSC-U, `RMBE01`)**. It is a snapshot of bits aggregated from various contributors in Discord, plus JDCL's draft room and league compiler. Want to help? See [AGENTS.md](AGENTS.md).
 
 ## In this repository
 
@@ -107,7 +107,7 @@ Close Dolphin before replacing any file, and back up your existing files first.
 - Mii database: copy [`RFL_DB.dat`](Dolphin/Wii/shared2/menu/FaceLib/RFL_DB.dat) to `Dolphin Emulator/Wii/shared2/menu/FaceLib/RFL_DB.dat`.
 - Stat Editor: place [`ParPatchv113.txt`](Stat-Editor/Gecko-Codes/ParPatchv113.txt) in the editor's `Gecko Codes` folder and load `ParPatchv113`.
 
-`RFL_DB.dat` replaces the destination's entire Mii database, not one Mii. The file can contain Mii names and creator/system identifiers, so treat it as personal data.
+`RFL_DB.dat` is JDCL's Mii collection. Copying it replaces the destination's entire Mii database, not one Mii.
 
 After changing Gecko codes, restart the game instead of loading an old save state.
 
