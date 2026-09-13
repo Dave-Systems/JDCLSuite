@@ -1,20 +1,27 @@
 # JDCLSuite
 
-This repository contains the current **Mario Super Sluggers (NTSC-U, `RMBE01`)** setup snapshot from Dolphin. Snapshot generated **2026-09-10T18:01:06Z**.
+This repository contains the current **Mario Super Sluggers (NTSC-U, `RMBE01`)** setup snapshot from Dolphin, plus JDCL's draft room and league compiler. Snapshot generated **2026-09-10T18:01:06Z**.
 
-## Downloads
+## In this repository
 
-- [Par Patch v1.12 Gecko code](Stat-Editor/Gecko-Codes/ParPatchv112.txt) — clean 173-line code for Sluggers Stat Editor.
+**Dolphin snapshot**
+
+- [Par Patch v1.12 Gecko code](Stat-Editor/Gecko-Codes/ParPatchv112.txt) — clean 173-line code to load in Sluggers Stat Editor (external).
 - [Dolphin `RMBE01.ini`](Dolphin/GameSettings/RMBE01.ini) — contains only the seven Gecko codes enabled in Dolphin when this snapshot was taken.
 - [Mario Super Sluggers save (`gamedata`)](Dolphin/Wii/title/00010000/524d4245/data/gamedata)
 - [Dolphin Mii database (`RFL_DB.dat`)](Dolphin/Wii/shared2/menu/FaceLib/RFL_DB.dat)
 
-## Useful tools
+**Tools**
 
 - [JDCL Draft Room](https://dave-systems.github.io/JDCLSuite/) — inspect the live ParPatch or paste a Gecko Code, then draft players manually across 2–8 teams using their patched stats and chemistry. Source: [`draft-simulator/`](draft-simulator/).
-- [Sluggers Stat Tracker](https://isthatc2.github.io/Sluggers-Stat-Tracker/)
-- [Sluggers Stat Editor](https://github.com/Philenarion/Sluggers-Stat-Editor)
 - [sluggers-league](sluggers-league/) — compile a folder of tracker `.xlsx` dumps into league standings, batting, and pitching. Windows: drag the folder onto [`sluggers-league.exe`](sluggers-league/sluggers-league.exe).
+
+## External tools
+
+Not in this repo. Linked because the snapshot and JDCL tools depend on them.
+
+- [Sluggers Stat Editor](https://github.com/Philenarion/Sluggers-Stat-Editor) — third-party editor for Super Sluggers Gecko stat patches. Load [`ParPatchv112.txt`](Stat-Editor/Gecko-Codes/ParPatchv112.txt) from this repo into it.
+- [Sluggers Stat Tracker](https://isthatc2.github.io/Sluggers-Stat-Tracker/) — third-party per-game tracker. Its `.xlsx` dumps are the input for [`sluggers-league`](sluggers-league/).
 
 ## Par Patch v1.12 changelog
 
