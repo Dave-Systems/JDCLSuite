@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <meta name="theme-color" content="#101820">
+  <meta name="theme-color" content="#e52521">
   <meta name="description" content="Draft Mario Super Sluggers teams using the stats and chemistry from your Gecko Code.">
   <title>JDCL Draft Room</title>
-  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101820'/%3E%3Cpath d='M9 7h10v13q0 6-7 6H7v-6h5q1 0 1-1v-6H9z' fill='%23ceff64'/%3E%3C/svg%3E">
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='15' fill='%23e52521'/%3E%3Ccircle cx='16' cy='16' r='10' fill='%23ffffff'/%3E%3Cpath d='M13 9h7v9q0 5-5.5 5H11v-4h3.5q.5 0 .5-.5V13h-2z' fill='%23e52521'/%3E%3C/svg%3E">
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
@@ -47,25 +47,34 @@
     </section>
     <section class="draft-strip" aria-label="Draft progress">
       <div><p class="eyebrow" id="draft-phase">SCOUTING</p><h2 id="on-clock">The board is yours.</h2><p id="draft-subtitle">Load a patch, compare the roster, and make your picks.</p></div>
-      <div class="draft-actions"><span class="turn-badge" id="turn-badge">Choose your teams above</span><button class="secondary" id="undo" disabled>↶ Undo pick</button><button class="text-button" id="reset" disabled>Reset</button></div>
+      <div class="draft-actions"><span class="turn-badge" id="turn-badge">Choose your teams above</span><button class="primary" id="export-teams" disabled title="Available once all teams are drafted">Export teams</button><button class="secondary" id="undo" disabled>↶ Undo pick</button><button class="text-button" id="reset" disabled>Reset</button></div>
       <div class="progress-track"><div id="draft-progress"></div></div>
     </section>
     <div class="workspace">
       <section class="board" aria-labelledby="board-title">
-        <div class="section-title"><h2 id="board-title">Player pool <span class="count" id="pool-count">—</span></h2><span class="small muted" id="changed-count"></span></div>
-        <div class="board-toolbar"><label class="search-wrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a character…" aria-label="Search characters"></label><label class="sr-only" for="class-filter">Character class</label><select id="class-filter"><option value="all">All classes</option><option>Balanced</option><option>Power</option><option>Speed</option><option>Technique</option></select><label class="sr-only" for="sort-by">Sort characters</label><select id="sort-by"><option value="id">Roster order</option><option value="chargePower">Charge power</option><option value="slapPower">Slap power</option><option value="speed">Speed</option><option value="displayPitching">Pitching</option><option value="name">Name</option></select></div>
-        <div class="filter-row"><label class="checkbox-label"><input id="changed-only" type="checkbox"> Patched only</label><label class="checkbox-label"><input id="show-drafted" type="checkbox"> Show drafted</label><span class="small muted">Select a player to inspect all stats</span></div>
-        <div class="table-wrap"><table><thead><tr><th scope="col">Player</th><th scope="col">Slap</th><th scope="col">Charge</th><th scope="col">Speed</th><th scope="col">Pitch</th><th scope="col"><span class="sr-only">Pick</span></th></tr></thead><tbody id="player-table"><tr><td colspan="6" class="empty-state">Load a Gecko Code to inspect your player pool.</td></tr></tbody></table></div>
-        <p class="small muted table-footnote">Slap, charge and speed show raw game stats. Pitch shows the displayed rating out of 10. Changes are measured against vanilla.</p>
+        <div class="section-title"><h2 id="board-title">Player pool <span class="count" id="pool-count">—</span></h2><span class="small muted" id="changed-count" role="status"></span></div>
+        <div class="board-toolbar"><label class="search-wrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a character…" aria-label="Search characters"></label><button class="secondary" id="filter-toggle" aria-expanded="false" aria-controls="filter-panel">Filters <span class="count" id="filter-count" hidden></span></button><details class="menu" id="column-menu"><summary>Columns</summary><div class="menu-panel" id="column-options" aria-label="Choose table columns"></div></details></div>
+        <div class="filter-panel" id="filter-panel" hidden></div>
+        <div class="filter-row"><label class="checkbox-label"><input id="changed-only" type="checkbox"> Patched only</label><label class="checkbox-label"><input id="show-drafted" type="checkbox"> Show drafted</label><span class="small muted">Select a column heading to sort · select a player to inspect all stats</span></div>
+        <div class="table-wrap"><table><caption class="sr-only">Player pool. Column headings sort the table.</caption><thead id="player-head"><tr><th scope="col">Player</th></tr></thead><tbody id="player-table"><tr><td class="empty-state">Load a Gecko Code to inspect your player pool.</td></tr></tbody></table></div>
+        <p class="small muted table-footnote">Stats are raw game values unless marked “/10”, which is the displayed rating. Changes are measured against vanilla. Chem counts players linked by good or bad chemistry in either direction: across the pool before a draft, or with the team on the clock once it has a player.</p>
       </section>
       <aside class="roster-sidebar" aria-labelledby="rosters-title"><div class="section-title"><h2 id="rosters-title">The dugouts</h2></div><div id="team-rosters"><div class="empty-rosters"><span class="empty-number">09</span><h3>Every pick counts.</h3><p>Your teams and their chemistry will appear here when the draft begins.</p></div></div></aside>
     </div>
-    <details class="methodology"><summary>About the roster and supported codes</summary><div><p>The app reads static Gecko writes into the Sluggers Stat Editor's known NTSC-U stat and chemistry tables. Unsupported instructions are reported. Game logic patches, assembly hooks and conditional codes are not simulated.</p><p>Each character or color variant can be drafted once. Mii entries represent the 24 color / gender stat slots. Chemistry is directional; the inspector shows a player's chemistry toward other characters.</p><p>Vanilla data and address mapping: <a href="https://github.com/Philenarion/Sluggers-Stat-Editor" target="_blank" rel="noreferrer">Philenarion / Sluggers Stat Editor</a>. Includes 71 playable character variants and 24 optional Mii slots; six unused slots are excluded. Baseline values are the editor's defaults.</p></div></details>
+    <details class="methodology"><summary>About the roster and supported codes</summary><div><p>The app reads static Gecko writes into the Sluggers Stat Editor's known NTSC-U stat and chemistry tables. Unsupported instructions are reported. Game logic patches, assembly hooks and conditional codes are not simulated.</p><p>Each character or color variant can be drafted once. Mii entries represent the 24 color / gender stat slots. Chemistry is directional; the inspector shows a player's chemistry toward other characters.</p><p>Vanilla data and address mapping: <a href="https://github.com/Philenarion/Sluggers-Stat-Editor" target="_blank" rel="noreferrer">Philenarion / Sluggers Stat Editor</a>. Includes 71 playable character variants and 24 optional Mii slots; six unused slots are excluded. Baseline values are the editor's defaults.</p><p>Character portraits: Mario Super Sluggers artwork © Nintendo, via <a href="https://www.sluggers.fyi/characters" target="_blank" rel="noreferrer">sluggers.fyi</a>. Mii slots have no portrait and show their color instead.</p></div></details>
   </main>
-  <footer><span>JDCL SUITE <span class="footer-divider">/</span> DRAFT ROOM</span><span>All code processing stays in this browser.</span></footer>
-  <dialog id="player-dialog" aria-labelledby="player-detail-title"><div class="dialog-heading"><div><p class="eyebrow" id="player-detail-class"></p><h2 id="player-detail-title"></h2></div><button id="close-detail" class="icon-button" aria-label="Close player details">×</button></div><div id="player-detail-body"></div></dialog>
+  <footer><span>JDCL SUITE <span class="footer-divider">/</span> DRAFT ROOM</span><span>Portraits © Nintendo, via <a href="https://www.sluggers.fyi/characters" target="_blank" rel="noreferrer">sluggers.fyi</a> <span class="footer-divider">/</span> All code processing stays in this browser.</span></footer>
+  <dialog id="player-dialog" aria-labelledby="player-detail-title"><div class="dialog-heading"><div class="dialog-title"><span id="player-detail-portrait"></span><div><p class="eyebrow" id="player-detail-class"></p><h2 id="player-detail-title"></h2></div></div><button id="close-detail" class="icon-button" aria-label="Close player details">×</button></div><div id="player-detail-body"></div></dialog>
   <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Reset this draft?</h2><p id="confirm-message">This clears the current picks.</p><div class="button-row"><button id="confirm-cancel" class="secondary">Keep drafting</button><button id="confirm-accept" class="primary">Reset draft</button></div></dialog>
   <noscript><p class="notice">Enable JavaScript to apply Gecko Codes and simulate a draft.</p></noscript>
+  <dialog id="export-dialog" aria-labelledby="export-title" aria-describedby="export-description">
+    <div class="dialog-heading"><h2 id="export-title">Export teams</h2><button id="export-close" class="icon-button" aria-label="Close team export">×</button></div>
+    <p id="export-description" class="muted">Save your completed rosters, pick order, and applied patch name. Choose text for sharing, CSV for spreadsheets, or JSON for other tools.</p>
+    <label>Export format<select id="export-format"><option value="txt">Text (.txt)</option><option value="csv">Spreadsheet (.csv)</option><option value="json">JSON (.json)</option></select></label>
+    <label for="export-preview">Preview</label>
+    <textarea id="export-preview" rows="10" readonly spellcheck="false"></textarea>
+    <div class="button-row"><button id="export-download" class="primary">Download .txt</button><span class="small muted">Exports are roster reports; they cannot reload a draft.</span></div>
+  </dialog>
   <script type="module" src="app.js"></script>
 </body>
 </html>
