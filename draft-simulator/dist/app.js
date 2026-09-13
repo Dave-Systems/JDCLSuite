@@ -3,9 +3,22 @@ import {createDraft,currentTurn,isUnlimited,MII_NAME_MAX,pickPlayer,undoPick,tea
 import {loadLivePatch} from './live-patch.js';
 import {activeFilterCount,buildColumns,chemistryLinks,defaultColumns,emptyFilters,filterPlayers,groups,handShort,nextSort,sortPlayers} from './pool.js';
 import {setupDraftExport} from './export.js';
+import {applyTheme,readTheme,toggleTheme} from './theme.js';
 
 const $=id=>document.getElementById(id);
 const escape=value=>String(value).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+function syncThemeButton() {
+  const theme=document.documentElement.dataset.theme==='light'?'light':'dark';
+  const next=theme==='dark'?'light':'dark';
+  const button=$('theme-toggle');
+  if(!button)return;
+  button.setAttribute('aria-pressed',String(theme==='dark'));
+  button.setAttribute('aria-label',`Switch to ${next} theme`);
+  button.textContent=next==='light'?'Light':'Dark';
+}
+applyTheme(readTheme());
+syncThemeButton();
+$('theme-toggle').addEventListener('click',()=>{toggleTheme(document.documentElement.dataset.theme);syncThemeButton();});
 let model,roster=[],draft=null,report=null,selectedId=null,ready=false;
 let activeName='Vanilla',activeCode=null,stagedSource=null,inputRevision=0;
 let pendingConfirm=null;

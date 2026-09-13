@@ -4,7 +4,7 @@ Inspect a Mario Super Sluggers NTSC-U (`RMBE01`) Gecko stat patch and conduct a 
 
 ## Run from JDCLSuite
 
-Hosted: [https://dave-systems.github.io/JDCLSuite/](https://dave-systems.github.io/JDCLSuite/). That copy reads ParPatch from GitHub `main`.
+Hosted: [https://dave-systems.github.io/JDCLSuite/](https://dave-systems.github.io/JDCLSuite/). That copy reads ParPatch from GitHub `main`. Dark is the default theme; **Light** in the header switches to a light theme and stores the choice in this browser.
 
 With Node.js 20 or newer, run `npm start` from this directory, then open `http://127.0.0.1:4173/`. On the same Wi‑Fi/Ethernet, a phone can use `http://<this-pc-ip>:4173/` (the server binds all interfaces). No installation or build is needed. The app source is in `dist/`, with a small dependency-free local server in `server.mjs`.
 

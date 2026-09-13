@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "start": "node server.mjs",
-    "test": "node --test tests/core.test.mjs tests/live-patch.test.mjs tests/pool.test.mjs tests/sources.test.mjs tests/export.test.mjs tests/portraits.test.mjs tests/mii-draft.test.mjs",
+    "test": "node --test tests/core.test.mjs tests/live-patch.test.mjs tests/pool.test.mjs tests/sources.test.mjs tests/export.test.mjs tests/portraits.test.mjs tests/mii-draft.test.mjs tests/theme.test.mjs",
     "sync:sluggers-fyi": "node scripts/sync-sluggers-fyi.mjs"
   },
   "engines": { "node": ">=20" }
