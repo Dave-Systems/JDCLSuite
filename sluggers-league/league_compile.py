@@ -4,8 +4,10 @@
 Reads the tracker's Game Info / Stats / Pitching sheets. Counting stats are
 summed across games; rates are recomputed from those totals.
 
-Player identity is (team, name, primary position) so identical names on the
-same roster — three Red Miis, two Yellow Miis, etc. — stay separate.
+Player identity starts as (team, name, primary position). After all games are
+in, batting rows for the same name on a team are compressed into one row when
+their combined games do not exceed that team's games (a player who moved).
+Two of the same name who overlap stay split by position.
 """
 
 from __future__ import annotations
@@ -248,6 +250,52 @@ def read_game(path: Path) -> dict[str, object]:
     return {"path": path, "info": info, "batters": batters, "pitchers": pitchers}
 
 
+def _games_by_team(games: list[dict[str, object]]) -> dict[str, int]:
+    counts: dict[str, int] = defaultdict(int)
+    for game in games:
+        for team in {batter["team"] for batter in game["batters"] if batter.get("team")}:
+            counts[team] += 1
+    return counts
+
+
+def _compress_batting(
+    batting: dict[tuple[str, str, str], dict],
+    team_games: dict[str, int],
+) -> dict[tuple[str, str, str], dict]:
+    grouped: dict[tuple[str, str], list[dict]] = defaultdict(list)
+    for slot in batting.values():
+        grouped[(slot["team"], slot["player"])].append(slot)
+    compressed: dict[tuple[str, str, str], dict] = {}
+    for (team, player), slots in grouped.items():
+        total = sum(slot["games"] for slot in slots)
+        cap = team_games.get(team, 0)
+        if len(slots) == 1 or (cap and total > cap):
+            for slot in slots:
+                compressed[(slot["team"], slot["player"], slot["position"])] = slot
+            continue
+        counts: dict[str, float] = defaultdict(float)
+        for slot in slots:
+            for stat, value in slot["counts"].items():
+                counts[stat] += value
+        positions = [
+            pos
+            for _, pos in sorted(
+                ((slot["games"], slot["position"]) for slot in slots),
+                key=lambda item: (-item[0], item[1] or ""),
+            )
+            if pos
+        ]
+        position = "/".join(dict.fromkeys(positions))
+        compressed[(team, player, position)] = {
+            "team": team,
+            "player": player,
+            "position": position,
+            "games": total,
+            "counts": counts,
+        }
+    return compressed
+
+
 def compile_league(games: list[dict[str, object]]) -> dict[str, object]:
     batting: dict[tuple[str, str, str], dict] = {}
     pitching: dict[tuple[str, str], dict] = {}
@@ -319,6 +367,8 @@ def compile_league(games: list[dict[str, object]]) -> dict[str, object]:
             slot["games"] += 1
             for stat, value in pitcher["counts"].items():
                 slot["counts"][stat] += value
+
+    batting = _compress_batting(batting, _games_by_team(games))
 
     batting_rows = []
     for slot in batting.values():
@@ -432,7 +482,7 @@ def write_workbook(compiled: dict[str, object], dest: Path, source_count: int) -
     cover["B6"] = len(compiled["pitching"])
     cover["A8"] = (
         "Rates are recomputed from summed counting stats. "
-        "Identical names on one roster are split by primary position."
+        "Position movers with the same name are one batting row; overlapping duplicates stay split."
     )
     cover.column_dimensions["A"].width = 42
     cover.column_dimensions["B"].width = 14

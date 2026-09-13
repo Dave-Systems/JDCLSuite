@@ -24,4 +24,4 @@ pip install openpyxl
 python league_compile.py "C:\path\to\game-xlsx-folder"
 ```
 
-Python 3.12+. Rates are recomputed from summed counting stats. Players with the same name on one roster are split by primary position.
+Python 3.12+. Rates are recomputed from summed counting stats. Same-name players who moved positions compress into one batting row; two of the same name who overlap stay split by primary position.
