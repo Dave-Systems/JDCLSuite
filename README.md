@@ -1,6 +1,6 @@
 # JDCLSuite
 
-This repository contains the current **Mario Super Sluggers (NTSC-U, `RMBE01`)** setup snapshot from Dolphin, plus JDCL's draft room and league compiler.
+This repository is the **Jimmy Draft Co League (JDCL)** setup for **Mario Super Sluggers (NTSC-U, `RMBE01`)**. It is a snapshot of bits aggregated from various contributors in Discord, plus JDCL's draft room and league compiler.
 
 ## In this repository
 
