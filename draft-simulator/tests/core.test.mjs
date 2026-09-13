@@ -7,14 +7,14 @@ import {createDraft,currentTurn,pickPlayer,undoPick,teamChemistry} from '../dist
 const baseline=JSON.parse(readFileSync(new URL('../dist/data/baseline.json',import.meta.url)));
 const schema=JSON.parse(readFileSync(new URL('../dist/data/schema.json',import.meta.url)));
 const model=createModel(baseline,schema);
-const sample=readFileSync(new URL('./fixtures/ParPatchv112.txt',import.meta.url),'utf8');
+const sample=readFileSync(new URL('./fixtures/ParPatchv113.txt',import.meta.url),'utf8');
 const ids=model.vanilla.filter(p=>p.playable).map(p=>p.id);
 
-test('ParPatch fixture matches independently verified 173-line patch and known stats',()=>{
+test('ParPatch fixture matches independently verified 175-line patch and known stats',()=>{
   const {roster,report}=model.apply(sample);
-  assert.equal(report.codeLines,173);assert.equal(report.instructions,153);
-  assert.equal(report.modeledBytes,687);assert.equal(report.paddingBytes,2);
-  assert.equal(report.statChanges,26);assert.equal(report.chemistryChanges,202);
+  assert.equal(report.codeLines,175);assert.equal(report.instructions,155);
+  assert.equal(report.modeledBytes,695);assert.equal(report.paddingBytes,2);
+  assert.equal(report.statChanges,26);assert.equal(report.chemistryChanges,204);
   assert.equal(report.changedPlayers,83);assert.deepEqual(report.warnings,[]);
   const byName=name=>roster.find(p=>p.name===name);
   assert.equal(byName('Green Koopa Troopa').stats.speed,75);
@@ -27,8 +27,8 @@ test('ParPatch fixture matches independently verified 173-line patch and known s
   assert.equal(byName('Donkey Kong').stats.fieldingAbility,11);
   assert.equal(byName('Peach').stats.trajectory,0);
   assert.equal(roster[100].chemistry[100],2);
-  assert.equal(roster.filter(p=>p.chemistryChanges.some(c=>c.id===p.id)).length,22);
-  assert.equal(roster[86].chemistryChanges.some(c=>c.id===86),false);
+  assert.equal(roster.filter(p=>p.chemistryChanges.some(c=>c.id===p.id)).length,24);
+  assert.equal(roster[86].chemistry[86],2);
   assert.equal(model.vanilla[12].stats.speed,64);
 });
 test('preserves all 101 IDs and excludes six unused slots from the 95-player pool',()=>{

@@ -9,7 +9,7 @@ import {chemistryLinks,emptyFilters,filterPlayers} from '../dist/pool.js';
 const json=path=>JSON.parse(readFileSync(new URL(path,import.meta.url)));
 const model=createModel(json('../dist/data/baseline.json'),json('../dist/data/schema.json'));
 const vanilla=model.vanilla;
-const patched=model.apply(readFileSync(new URL('./fixtures/ParPatchv112.txt',import.meta.url),'utf8')).roster;
+const patched=model.apply(readFileSync(new URL('./fixtures/ParPatchv113.txt',import.meta.url),'utf8')).roster;
 const slot=name=>vanilla.find(p=>p.name===name).id;
 const characters=vanilla.filter(p=>p.playable&&p.kind!=='mii').map(p=>p.id);
 const miis=vanilla.filter(p=>p.kind==='mii').map(p=>p.id);
@@ -55,9 +55,9 @@ test('Mii gender slots differ only in batting side, so the pick decides handedne
 
 test('team chemistry counts two Miis from the same slot using that slot\'s self-chemistry',()=>{
   const red=patched[slot('Red Mii (M)')],brown=patched[slot('Brown Mii (M)')];
-  assert.equal(red.chemistry[red.id],2);assert.equal(brown.chemistry[brown.id],1);
+  assert.equal(red.chemistry[red.id],2);assert.equal(brown.chemistry[brown.id],2);
   assert.deepEqual(teamChemistry([red,red]),{good:2,bad:0});
-  assert.deepEqual(teamChemistry([brown,brown]),{good:0,bad:0});
+  assert.deepEqual(teamChemistry([brown,brown]),{good:2,bad:0});
   assert.deepEqual(teamChemistry([patched[0]]),{good:0,bad:0});
   // A pooled Red Mii row (a separate object for the same slot) links to a Red Mii already on the team.
   const pooledRed={...red,name:'Red Mii'};
