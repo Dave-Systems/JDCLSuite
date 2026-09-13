@@ -1,6 +1,6 @@
 # JDCLSuite
 
-This repository contains the current **Mario Super Sluggers (NTSC-U, `RMBE01`)** setup snapshot from Dolphin, plus JDCL's draft room and league compiler. Snapshot generated **2026-09-10T18:01:06Z**.
+This repository contains the current **Mario Super Sluggers (NTSC-U, `RMBE01`)** setup snapshot from Dolphin, plus JDCL's draft room and league compiler.
 
 ## In this repository
 
