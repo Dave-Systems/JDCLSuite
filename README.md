@@ -11,6 +11,7 @@ This repository contains the current **Mario Super Sluggers (NTSC-U, `RMBE01`)**
 
 ## Useful tools
 
+- [JDCL Draft Room](https://dave-systems.github.io/JDCLSuite/) — inspect the live ParPatch or paste a Gecko Code, then draft players manually across 2–8 teams using their patched stats and chemistry. Source: [`draft-simulator/`](draft-simulator/).
 - [Sluggers Stat Tracker](https://isthatc2.github.io/Sluggers-Stat-Tracker/)
 - [Sluggers Stat Editor](https://github.com/Philenarion/Sluggers-Stat-Editor)
 - [sluggers-league](sluggers-league/) — compile a folder of tracker `.xlsx` dumps into league standings, batting, and pitching. Windows: drag the folder onto [`sluggers-league.exe`](sluggers-league/sluggers-league.exe).

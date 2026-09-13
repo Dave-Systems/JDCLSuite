@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1">
+  <meta name="theme-color" content="#101820">
+  <meta name="description" content="Draft Mario Super Sluggers teams using the stats and chemistry from your Gecko Code.">
+  <title>JDCL Draft Room</title>
+  <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='7' fill='%23101820'/%3E%3Cpath d='M9 7h10v13q0 6-7 6H7v-6h5q1 0 1-1v-6H9z' fill='%23ceff64'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <header class="masthead">
+    <a class="brand" href="./" aria-label="JDCL Draft Room home"><span class="brand-mark">J</span><span>JDCL <strong>DRAFT ROOM</strong></span></a>
+    <span class="edition">MARIO SUPER SLUGGERS <span class="region">NTSC-U · RMBE01</span></span>
+  </header>
+  <main>
+    <div class="page-heading"><div><p class="eyebrow">YOUR PATCH. YOUR PLAYER POOL.</p><h1>Build your starting nine.</h1></div><div class="patch-pill" id="patch-badge">Vanilla · no code applied</div></div>
+    <div id="notice" class="notice" role="status" hidden></div>
+    <section class="setup-grid" aria-label="Patch and draft setup">
+      <details class="panel import-panel" id="import-panel" open>
+        <summary><span class="step-number">01</span><span>Load your Gecko Code</span><span class="summary-note" id="import-summary">Start with your stat patch</span></summary>
+        <div class="panel-body">
+          <p class="muted">Inspect the live JDCLSuite ParPatch below, or paste your own. Click <strong>Apply code</strong> to use it in the draft.</p>
+          <p class="source-status" id="source-status" role="status">Fetching the live JDCLSuite ParPatch…</p>
+          <label class="sr-only" for="gecko-code">Gecko Code</label>
+          <textarea id="gecko-code" spellcheck="false" placeholder="04628954 0037002A&#10;0662A164 00000008&#10;00000000 00000200" rows="5"></textarea>
+          <div class="button-row"><button class="primary" id="apply-code" disabled>Apply code</button><button class="secondary" id="load-sample">Reload live ParPatch</button><label class="file-button" for="code-file">Open file<input id="code-file" type="file" accept=".txt,text/plain" class="sr-only"></label></div>
+          <div class="import-meta"><button class="text-button" id="use-vanilla">Use vanilla stats</button><span>RMBE01 stat patches</span></div>
+          <div id="import-report" hidden></div>
+        </div>
+      </details>
+      <section class="panel config-panel" aria-labelledby="setup-title">
+        <div class="panel-heading"><span class="step-number">02</span><h2 id="setup-title">Set the draft</h2></div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <label>Teams<select id="team-count"><option value="2">2 teams</option><option value="3">3 teams</option><option value="4">4 teams</option><option value="5">5 teams</option><option value="6">6 teams</option><option value="7">7 teams</option><option value="8">8 teams</option></select></label>
+            <label>Players per team<select id="roster-size"><option value="9">9 players</option><option value="12">12 players</option></select></label>
+            <label>Pick order<select id="draft-order"><option value="snake">Snake</option><option value="linear">Linear</option></select></label>
+            <label class="checkbox-label"><input type="checkbox" id="include-miis" checked> Include Mii slots</label>
+          </div>
+          <div class="team-name-fields" id="team-names"><label>Team 1 name<input class="team-name" maxlength="32" value="Team 1"></label><label>Team 2 name<input class="team-name" maxlength="32" value="Team 2"></label></div>
+          <div class="config-bottom"><span class="small muted">Take turns choosing players.</span><button class="primary" id="start-draft" disabled>Start draft <span aria-hidden="true">↗</span></button></div>
+          <p class="small muted" id="setup-note">Nine rounds. The pick order reverses each round.</p>
+        </div>
+      </section>
+    </section>
+    <section class="draft-strip" aria-label="Draft progress">
+      <div><p class="eyebrow" id="draft-phase">SCOUTING</p><h2 id="on-clock">The board is yours.</h2><p id="draft-subtitle">Load a patch, compare the roster, and make your picks.</p></div>
+      <div class="draft-actions"><span class="turn-badge" id="turn-badge">Choose your teams above</span><button class="secondary" id="undo" disabled>↶ Undo pick</button><button class="text-button" id="reset" disabled>Reset</button></div>
+      <div class="progress-track"><div id="draft-progress"></div></div>
+    </section>
+    <div class="workspace">
+      <section class="board" aria-labelledby="board-title">
+        <div class="section-title"><h2 id="board-title">Player pool <span class="count" id="pool-count">—</span></h2><span class="small muted" id="changed-count"></span></div>
+        <div class="board-toolbar"><label class="search-wrap"><span aria-hidden="true">⌕</span><input id="search" type="search" placeholder="Find a character…" aria-label="Search characters"></label><label class="sr-only" for="class-filter">Character class</label><select id="class-filter"><option value="all">All classes</option><option>Balanced</option><option>Power</option><option>Speed</option><option>Technique</option></select><label class="sr-only" for="sort-by">Sort characters</label><select id="sort-by"><option value="id">Roster order</option><option value="chargePower">Charge power</option><option value="slapPower">Slap power</option><option value="speed">Speed</option><option value="displayPitching">Pitching</option><option value="name">Name</option></select></div>
+        <div class="filter-row"><label class="checkbox-label"><input id="changed-only" type="checkbox"> Patched only</label><label class="checkbox-label"><input id="show-drafted" type="checkbox"> Show drafted</label><span class="small muted">Select a player to inspect all stats</span></div>
+        <div class="table-wrap"><table><thead><tr><th scope="col">Player</th><th scope="col">Slap</th><th scope="col">Charge</th><th scope="col">Speed</th><th scope="col">Pitch</th><th scope="col"><span class="sr-only">Pick</span></th></tr></thead><tbody id="player-table"><tr><td colspan="6" class="empty-state">Load a Gecko Code to inspect your player pool.</td></tr></tbody></table></div>
+        <p class="small muted table-footnote">Slap, charge and speed show raw game stats. Pitch shows the displayed rating out of 10. Changes are measured against vanilla.</p>
+      </section>
+      <aside class="roster-sidebar" aria-labelledby="rosters-title"><div class="section-title"><h2 id="rosters-title">The dugouts</h2></div><div id="team-rosters"><div class="empty-rosters"><span class="empty-number">09</span><h3>Every pick counts.</h3><p>Your teams and their chemistry will appear here when the draft begins.</p></div></div></aside>
+    </div>
+    <details class="methodology"><summary>About the roster and supported codes</summary><div><p>The app reads static Gecko writes into the Sluggers Stat Editor's known NTSC-U stat and chemistry tables. Unsupported instructions are reported. Game logic patches, assembly hooks and conditional codes are not simulated.</p><p>Each character or color variant can be drafted once. Mii entries represent the 24 color / gender stat slots. Chemistry is directional; the inspector shows a player's chemistry toward other characters.</p><p>Vanilla data and address mapping: <a href="https://github.com/Philenarion/Sluggers-Stat-Editor" target="_blank" rel="noreferrer">Philenarion / Sluggers Stat Editor</a>. Includes 71 playable character variants and 24 optional Mii slots; six unused slots are excluded. Baseline values are the editor's defaults.</p></div></details>
+  </main>
+  <footer><span>JDCL SUITE <span class="footer-divider">/</span> DRAFT ROOM</span><span>All code processing stays in this browser.</span></footer>
+  <dialog id="player-dialog" aria-labelledby="player-detail-title"><div class="dialog-heading"><div><p class="eyebrow" id="player-detail-class"></p><h2 id="player-detail-title"></h2></div><button id="close-detail" class="icon-button" aria-label="Close player details">×</button></div><div id="player-detail-body"></div></dialog>
+  <dialog id="confirm-dialog" aria-labelledby="confirm-title"><h2 id="confirm-title">Reset this draft?</h2><p id="confirm-message">This clears the current picks.</p><div class="button-row"><button id="confirm-cancel" class="secondary">Keep drafting</button><button id="confirm-accept" class="primary">Reset draft</button></div></dialog>
+  <noscript><p class="notice">Enable JavaScript to apply Gecko Codes and simulate a draft.</p></noscript>
+  <script type="module" src="app.js"></script>
+</body>
+</html>

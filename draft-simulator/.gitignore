@@ -1,0 +1,6 @@
+.sites-runtime/
+node_modules/
+.env
+*.log
+.claude/
+.openai/
