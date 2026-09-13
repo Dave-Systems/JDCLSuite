@@ -5,7 +5,7 @@ This repo is the **Jimmy Draft Co League (JDCL)** setup for Mario Super Sluggers
 ## Layout
 
 - `Stat-Editor/Gecko-Codes/` — live ParPatch (`ParPatchv*.txt`)
-- `Dolphin/` — game settings, save, Mii collection
+- `Dolphin/` — game settings, save, Mii collection (copy onto the live user folder: `%APPDATA%\Dolphin Emulator` on Windows)
 - `draft-simulator/` — Draft Room (app in `dist/`, no build)
 - `sluggers-league/` — tracker `.xlsx` → standings
 
