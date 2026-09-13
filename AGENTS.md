@@ -1,6 +1,6 @@
 # AGENTS.md
 
-This repo is the **Jimmy Draft Co League (JDCL)** setup for Mario Super Sluggers (NTSC-U `RMBE01`): a snapshot of bits aggregated from Discord, plus the draft room and league compiler. Help is welcome — open a PR, or point a coding agent at this file.
+This repo is the **Jimmy Draft Co League (JDCL)** setup for Mario Super Sluggers (NTSC-U `RMBE01`): a snapshot of bits aggregated from Discord, plus the draft room and league compiler. Help is welcome — open a pull request. If you're using a coding agent, have it read this file.
 
 ## Layout
 
