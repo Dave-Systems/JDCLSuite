@@ -27,13 +27,12 @@ Not in this repo. Linked because the snapshot and JDCL tools depend on them.
 
 ### v1.13
 
-- All Miis have positive chemistry with their own color (formerly brown was excluded).
+- Fix from v1.12: all Miis have positive chemistry with their own color (brown was excluded).
 
 ### v1.12
 
 ### Chemistry
 
-- All color variants have positive chemistry with the other variants in their group.
 - Captain chemistry adds a second Mii color while preserving vanilla color chemistry:
   - Birdo — Light Blue
   - Bowser — Orange
