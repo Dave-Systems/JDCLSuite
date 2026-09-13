@@ -27,7 +27,7 @@ Not in this repo. Linked because the snapshot and JDCL tools depend on them.
 
 ### v1.13
 
-- All Miis have positive chemistry with their own color.
+- All Miis have positive chemistry with their own color. (formerly brown was excluded)
 
 ### v1.12
 
