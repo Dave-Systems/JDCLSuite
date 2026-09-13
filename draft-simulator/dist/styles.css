@@ -62,3 +62,13 @@ tr.drafted td>*{opacity:.55}
 .brand-mark{width:34px;height:34px}
 #player-detail-portrait{display:contents}
 @media(max-width:450px){.section-title h2{font-size:1.35rem}.count{white-space:nowrap}}
+.pick-meta{display:block;font-size:.72rem;color:var(--muted);font-weight:400}
+#mii-dialog{max-width:480px}
+#mii-dialog form{display:flex;flex-direction:column;gap:1rem}
+.mii-name-field{display:flex;flex-direction:column;gap:.35rem}
+.mii-gender{border:1px solid var(--line);border-radius:6px;padding:.6rem .9rem .8rem;margin:0;display:flex;gap:1.2rem;flex-wrap:wrap}
+.mii-gender legend{padding:0 .3rem;font-size:.875rem;font-weight:500}
+.mii-gender .checkbox-label{color:var(--text);font-size:.9rem}
+.mii-gender input[type=radio]{accent-color:var(--mario);width:16px;height:16px;margin:0}
+.field-error{color:#ffd1cd;background:#3d1a26;border:1px solid #b0413e;border-radius:5px;padding:.5rem .7rem;font-size:.85rem}
+#mii-portrait{display:contents}

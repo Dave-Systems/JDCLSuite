@@ -43,7 +43,8 @@ export function buildColumns(fields) {
 export function chemistryLinks(player, others) {
   const good=[],bad=[];
   for(const other of others) {
-    if(other.id===player.id) continue;
+    // Skip the same roster entry, but a pooled Mii color still links to a teammate drafted from its slot.
+    if(other===player) continue;
     const toward=player.chemistry[other.id],from=other.chemistry[player.id];
     if(toward===2||from===2) good.push(other);
     if(toward===0||from===0) bad.push(other);
@@ -65,14 +66,17 @@ export function activeFilterCount(filters) {
 export function filterPlayers(players, filters, context) {
   const stats=Object.entries(filters.stats);
   const team=context.team?.length?context.team:null;
+  // A pooled Mii color matches when either of its game slots (male bats right, female bats left) does.
+  const statsMatch=stats=>Object.entries(filters.stats).every(([key,f])=>{
+    const value=stats[key];
+    if(f.equals!=null&&value!==f.equals) return false;
+    // Stats are float32 or small integers; rounding the typed bound the same way keeps 1.18 ≥ 1.18.
+    if(f.min!=null&&!(value>=Math.fround(f.min))) return false;
+    if(f.max!=null&&!(value<=Math.fround(f.max))) return false;
+    return true;
+  });
   return players.filter(p=>{
-    for(const [key,f] of stats) {
-      const value=p.stats[key];
-      if(f.equals!=null&&value!==f.equals) return false;
-      // Stats are float32 or small integers; rounding the typed bound the same way keeps 1.18 ≥ 1.18.
-      if(f.min!=null&&!(value>=Math.fround(f.min))) return false;
-      if(f.max!=null&&!(value<=Math.fround(f.max))) return false;
-    }
+    if(stats.length&&!(p.variants||[p]).some(v=>statsMatch(v.stats))) return false;
     if(team&&filters.chemTeam!=='any') {
       const links=chemistryLinks(p,team);
       if((filters.chemTeam==='good'||filters.chemTeam==='goodnobad')&&!links.good.length) return false;

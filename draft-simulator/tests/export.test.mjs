@@ -31,9 +31,9 @@ test('snake export preserves team assignments, round numbers, and actual pick or
   const data=createDraftExport({draft,roster:[...roster].reverse(),patchName:'ParPatch v1.12',exportedAt});
   assert.deepEqual(data.teams.map(t=>t.name),['Stars','Comets']);
   assert.deepEqual(data.teams[0].players.slice(0,3),[
-    {id:0,name:'Mario',round:1,pick:1},
-    {id:3,name:'Diddy Kong',round:2,pick:4},
-    {id:4,name:'Peach',round:3,pick:5},
+    {id:0,name:'Mario',character:'Mario',round:1,pick:1},
+    {id:3,name:'Diddy Kong',character:'Diddy Kong',round:2,pick:4},
+    {id:4,name:'Peach',character:'Peach',round:3,pick:5},
   ]);
   assert.equal(data.teams[1].players.at(-1).pick,18);
   assert.equal(data.patchName,'ParPatch v1.12');
@@ -69,7 +69,7 @@ test('CSV escapes punctuation and Unicode and treats formula-like names as text'
   const data=createDraftExport({draft,roster,patchName:'@Patch',exportedAt});
   const csv=formatDraftExport(data,'csv');
   assert.ok(csv.content.startsWith('\uFEFF"Team","Roster slot"'));
-  assert.ok(csv.content.includes('"Stars, ""Élite""","1","Mario","0","1","1"'));
+  assert.ok(csv.content.includes('"Stars, ""Élite""","1","Mario","Mario","","0","1","1"'));
   assert.ok(csv.content.includes('"\'=1+1"'));
   assert.ok(csv.content.includes('"\'@Patch"'));
   assert.equal(csv.content.trimEnd().split('\r\n').length,19);

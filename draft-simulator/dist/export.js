@@ -8,7 +8,7 @@ export function createDraftExport({draft,roster,patchName='Vanilla',exportedAt=n
   if(!canExportDraft(draft))throw new Error('Finish drafting all teams before exporting.');
   const byId=new Map(roster.map(player=>[player.id,player]));
   return {
-    version:1,
+    version:2,
     exportedAt,
     patchName,
     order:draft.order,
@@ -18,7 +18,10 @@ export function createDraftExport({draft,roster,patchName='Vanilla',exportedAt=n
       players:draft.picks.filter(pick=>pick.team===index).map(pick=>{
         const player=byId.get(pick.id);
         if(!player)throw new Error(`Player ${pick.id} is missing from the roster.`);
-        return {id:player.id,name:player.name,round:pick.round,pick:pick.pick};
+        if(player.kind!=='mii')return {id:player.id,name:player.name,character:player.name,round:pick.round,pick:pick.pick};
+        // Mii picks carry the league's custom name; the game slot fixes color and gender (male bats right, female left).
+        const gender=/\(F\)\s*$/.test(player.name)?'Female':'Male';
+        return {id:player.id,name:pick.name??player.name,character:player.name.replace(/\s*\([MF]\)\s*$/,''),miiGender:gender,round:pick.round,pick:pick.pick};
       }),
     })),
   };
@@ -44,15 +47,15 @@ export function formatDraftExport(data,format) {
       '',
       ...data.teams.flatMap(team=>[
         team.name,
-        ...team.players.map((player,index)=>`${index+1}. ${player.name} (round ${player.round}, pick #${player.pick})`),
+        ...team.players.map((player,index)=>`${index+1}. ${player.name}${player.miiGender?` [${player.character}, ${player.miiGender}]`:''} (round ${player.round}, pick #${player.pick})`),
         '',
       ]),
     ].join('\n');
   } else if(format==='csv') {
     type='text/csv;charset=utf-8';
-    const rows=[['Team','Roster slot','Player','Player ID','Round','Overall pick','Draft order','Players per team','Applied stats','Exported at']];
+    const rows=[['Team','Roster slot','Player','Character','Mii gender','Player ID','Round','Overall pick','Draft order','Players per team','Applied stats','Exported at']];
     for(const team of data.teams)team.players.forEach((player,index)=>rows.push([
-      team.name,index+1,player.name,player.id,player.round,player.pick,data.order,data.rosterSize,data.patchName,data.exportedAt,
+      team.name,index+1,player.name,player.character,player.miiGender??'',player.id,player.round,player.pick,data.order,data.rosterSize,data.patchName,data.exportedAt,
     ]));
     content='\uFEFF'+rows.map(row=>row.map(csvCell).join(',')).join('\r\n')+'\r\n';
   } else if(format==='json') {

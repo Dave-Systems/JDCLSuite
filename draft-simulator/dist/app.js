@@ -1,5 +1,5 @@
 import {createModel,formatStat,parseGecko} from './gecko.js';
-import {createDraft,currentTurn,pickPlayer,undoPick,teamChemistry} from './draft.js';
+import {createDraft,currentTurn,isUnlimited,MII_NAME_MAX,pickPlayer,undoPick,teamChemistry} from './draft.js';
 import {loadLivePatch} from './live-patch.js';
 import {activeFilterCount,buildColumns,chemistryLinks,defaultColumns,emptyFilters,filterPlayers,groups,handShort,nextSort,sortPlayers} from './pool.js';
 import {setupDraftExport} from './export.js';
@@ -23,7 +23,30 @@ function portrait(p,className='player-avatar',variant='mugshot') {
   const initials=p.name.split(/\s+/).filter(w=>!w.startsWith('(')).slice(0,2).map(w=>w[0]).join('');
   return `<span class="${className} mii" style="--avatar-bg:${bg};${fg?`color:${fg};text-shadow:none`:''}" aria-hidden="true">${escape(initials)}</span>`;
 }
-const eligible=()=>roster.filter(p=>p.playable&&($('include-miis').checked||p.kind!=='mii'));
+const miiColorOf=p=>p.name.replace(/ Mii\b.*$/,'');
+const miiGenderOf=p=>/\(F\)\s*$/.test(p.name)?'Female':'Male';
+const isMiiSlot=id=>roster[id]?.kind==='mii';
+let miiRowCache={roster:null,rows:[]};
+// The league drafts each Mii color any number of times. The game has a male slot (bats right) and a
+// female slot (bats left) per color, so the pool shows one color row and the pick dialog chooses the slot.
+function miiColorRows() {
+  if(miiRowCache.roster!==roster) {
+    const slots=roster.filter(p=>p.playable&&p.kind==='mii');
+    const rows=slots.filter(p=>miiGenderOf(p)==='Male').map(male=>{
+      const variants=slots.filter(p=>miiColorOf(p)===miiColorOf(male));
+      return {...male,name:`${miiColorOf(male)} Mii`,miiColorRow:true,variants,changes:variants.flatMap(v=>v.changes),chemistryChanges:variants.flatMap(v=>v.chemistryChanges)};
+    });
+    miiRowCache={roster,rows};
+  }
+  return miiRowCache.rows;
+}
+const draftSlots=()=>roster.filter(p=>p.playable&&($('include-miis').checked||p.kind!=='mii'));
+const eligible=()=>[...roster.filter(p=>p.playable&&p.kind!=='mii'),...($('include-miis').checked?miiColorRows():[])];
+function miiCounts() {
+  const counts=new Map();
+  for(const pick of draft?.picks||[])if(isMiiSlot(pick.id)){const color=miiColorOf(roster[pick.id]);counts.set(color,(counts.get(color)||0)+1);}
+  return counts;
+}
 const delta=(value,old)=>value===old?'':`<span class="delta ${value<old?'negative':''}">${value>old?'+':''}${Number((value-old).toFixed(4))}</span>`;
 function notice(message,type='') { $('notice').textContent=message;$('notice').className=`notice ${type}`;$('notice').hidden=!message; }
 function safe(action) {return (...args)=>{try{const result=action(...args);if(result?.catch)result.catch(e=>notice(e.message,'error'));return result;}catch(e){notice(e.message,'error');}};}
@@ -77,19 +100,47 @@ function renderTeamNames() {
 function startDraft() {
   if(!ready)throw new Error('Apply the code or select Use vanilla stats before starting a draft.');
   renderTeamNames();
-  draft=createDraft({names:[...document.querySelectorAll('.team-name')].map(e=>e.value),rosterSize:Number($('roster-size').value),order:$('draft-order').value,playerIds:eligible().map(p=>p.id)});
+  const slots=draftSlots();
+  draft=createDraft({names:[...document.querySelectorAll('.team-name')].map(e=>e.value),rosterSize:Number($('roster-size').value),order:$('draft-order').value,playerIds:slots.map(p=>p.id),unlimitedIds:slots.filter(p=>p.kind==='mii').map(p=>p.id)});
   $('import-panel').open=false;notice('');render();
   $('on-clock').scrollIntoView({behavior:matchMedia('(prefers-reduced-motion: reduce)').matches?'instant':'smooth',block:'center'});
 }
-function doPick(id) {
-  const player=roster.find(p=>p.id===id);
+const pickLabel=pick=>{const p=roster[pick.id];return pick.name?`${pick.name} (${miiColorOf(p)} Mii, ${miiGenderOf(p)})`:p.name;};
+function doPick(id,options={}) {
   const turn=currentTurn(draft);
-  draft=pickPlayer(draft,id);
+  draft=pickPlayer(draft,id,options);
+  const label=pickLabel(draft.picks.at(-1));
   if($('player-dialog').open)$('player-dialog').close();
   render();
   const next=currentTurn(draft);
-  notice(`${draft.names[turn.team]} picked ${player.name}. ${next?`${draft.names[next.team]} picks next.`:'The draft is complete.'}`);
-  return {player:player.name,team:draft.names[turn.team],nextTeam:next?draft.names[next.team]:null,complete:!next};
+  notice(`${draft.names[turn.team]} picked ${label}. ${next?`${draft.names[next.team]} picks next.`:'The draft is complete.'}`);
+  return {player:label,team:draft.names[turn.team],nextTeam:next?draft.names[next.team]:null,complete:!next};
+}
+let miiPending=null;
+function openMiiDialog(id,row=-1) {
+  const turn=currentTurn(draft);
+  if(!turn)throw new Error('Start a draft with open roster spots first.');
+  const color=miiColorOf(roster[id]);
+  if($('player-dialog').open)$('player-dialog').close();
+  miiPending={color,row};
+  $('mii-title').textContent=`Draft a ${color} Mii`;
+  $('mii-team').textContent=`${draft.names[turn.team]} · pick ${turn.pick}`;
+  $('mii-portrait').innerHTML=portrait(roster[id],'detail-portrait');
+  $('mii-form').reset();$('mii-error').hidden=true;
+  $('mii-dialog').showModal();$('mii-name').focus();
+}
+function submitMii(event) {
+  event.preventDefault();
+  const showError=message=>{$('mii-error').textContent=message;$('mii-error').hidden=false;};
+  const name=$('mii-name').value,gender=$('mii-form').elements['mii-gender'].value;
+  if(!name.trim()){showError('Enter a name for this Mii.');$('mii-name').focus();return;}
+  if(!gender){showError('Choose Male (bats right) or Female (bats left).');return;}
+  const slot=roster.find(p=>p.playable&&p.kind==='mii'&&miiColorOf(p)===miiPending.color&&miiGenderOf(p)===gender);
+  const {row}=miiPending;
+  try{doPick(slot.id,{name});}catch(e){showError(e.message);return;}
+  miiPending=null;$('mii-dialog').close();
+  const next=$('player-table').rows[row];
+  (next?.querySelector('[data-pick]:not([disabled])')||$('search')).focus();
 }
 function renderReport() {
   $('patch-badge').textContent=ready?`${activeName}${report?.warnings.length?' · partial coverage':''}`:'Vanilla · no code applied';
@@ -102,10 +153,19 @@ function renderReport() {
 function chemistryTeam() {
   const turn=currentTurn(draft);
   if(!turn)return null;
-  const players=draft.picks.filter(p=>p.team===turn.team).map(p=>roster[p.id]);
+  // Drafted Miis appear under their league names; characters stay the roster entries so they never link to themselves.
+  const players=draft.picks.filter(p=>p.team===turn.team).map(p=>p.name?{...roster[p.id],name:p.name}:roster[p.id]);
   return players.length?{name:draft.names[turn.team],players}:null;
 }
+// A Mii color row shows both slot values where they differ, e.g. bats "R/L" (male right, female left).
+const slotValues=(p,key)=>p.variants&&new Set(p.variants.map(v=>v.stats[key])).size>1?p.variants:null;
+const handText=(p,key)=>slotValues(p,key)?slotValues(p,key).map(v=>handShort[v.stats[key]]??'?').join('/'):handShort[p.stats[key]]??'?';
 function statCell(p,column) {
+  const variants=slotValues(p,column.id);
+  if(variants){
+    const spoken=variants.map(v=>`${formatStat(column.field,v.stats[column.id])} if ${miiGenderOf(v).toLowerCase()}`).join(', ');
+    return `<span aria-hidden="true">${column.id==='battingArm'||column.id==='pitchingArm'?handText(p,column.id):variants.map(v=>escape(formatStat(column.field,v.stats[column.id]))).join(' / ')}</span><span class="sr-only">${escape(spoken)}</span>`;
+  }
   const value=p.stats[column.id],old=model.vanilla[p.id].stats[column.id],field=column.field;
   if(column.kind==='number')return `${escape(formatStat(field,value))}${delta(value,old)}`;
   const label=formatStat(field,value);
@@ -133,8 +193,9 @@ function renderHead(team) {
   return shown;
 }
 function renderTable() {
-  const used=new Map(draft?.picks.map(p=>[p.id,p.team])||[]);
+  const used=new Map(draft?.picks.filter(p=>!isUnlimited(draft,p.id)).map(p=>[p.id,p.team])||[]);
   const pool=eligible();
+  const miiDrafted=miiCounts();
   const available=pool.filter(p=>!used.has(p.id));
   const team=chemistryTeam();
   const search=$('search').value.trim().toLowerCase();
@@ -142,7 +203,8 @@ function renderTable() {
   const shown=renderHead(team);
   const matches=filterPlayers(pool.filter(p=>(!used.has(p.id)||$('show-drafted').checked)&&(!search||p.name.toLowerCase().includes(search))&&(!$('changed-only').checked||p.changes.length||p.chemistryChanges.length)),filters,context);
   const list=sortPlayers(matches,sort,columns,context);
-  $('pool-count').textContent=`${pool.length-used.size} available`;
+  const miisInPool=pool.some(p=>p.miiColorRow);
+  $('pool-count').textContent=`${pool.filter(p=>!p.miiColorRow&&!used.has(p.id)).length} available${miisInPool?' + unlimited Miis':''}`;
   const status=`${report?`${pool.filter(p=>p.changes.length||p.chemistryChanges.length).length} patched · `:''}${list.length} shown`;
   if($('changed-count').textContent!==status)$('changed-count').textContent=status;
   const count=activeFilterCount(filters);
@@ -152,9 +214,10 @@ function renderTable() {
   $('player-table').innerHTML=list.map(p=>{
     const changed=p.changes.length||p.chemistryChanges.length;
     // Handedness always shows: in its own columns, or in the subtitle when those columns are hidden.
-    const hands=['battingArm','pitchingArm'].filter(key=>!visibleColumns.has(key)).map(key=>` · ${key==='battingArm'?'Bats':'Throws'} ${handShort[p.stats[key]]??'?'}`).join('');
+    const hands=['battingArm','pitchingArm'].filter(key=>!visibleColumns.has(key)).map(key=>` · ${key==='battingArm'?'Bats':'Throws'} ${handText(p,key)}`).join('');
+    const miiNote=p.miiColorRow?` · Unlimited${miiDrafted.get(miiColorOf(p))?` · drafted ${miiDrafted.get(miiColorOf(p))}×`:''}`:'';
     const cells=shown.slice(1).map(c=>`<td>${c.kind==='chem'?chemCell(p,team,available):statCell(p,c)}</td>`).join('');
-    return `<tr${used.has(p.id)?' class="drafted"':''}><td><button class="player-name" data-inspect="${p.id}" aria-label="Inspect ${escape(p.name)}">${portrait(p)}<span><span class="player-label">${escape(p.name)}${changed?'<span class="patch-dot" aria-label="Patched">◆</span>':''}</span><span class="player-subtitle">${escape(classNames[p.stats.class]||`Class ${p.stats.class}`)}${p.stats.captain?' · Captain':''}${hands}</span></span></button></td>${cells}<td>${used.has(p.id)?`<span class="small">${escape(draft.names[used.get(p.id)])}</span>`:`<button class="pick-button" data-pick="${p.id}" ${!turn?'disabled':''} aria-label="Pick ${escape(p.name)}${turn?` for ${escape(draft.names[turn.team])}`:''}">Pick +</button>`}</td></tr>`;
+    return `<tr${used.has(p.id)?' class="drafted"':''}><td><button class="player-name" data-inspect="${p.id}" aria-label="Inspect ${escape(p.name)}">${portrait(p)}<span><span class="player-label">${escape(p.name)}${changed?'<span class="patch-dot" aria-label="Patched">◆</span>':''}</span><span class="player-subtitle">${escape(classNames[p.stats.class]||`Class ${p.stats.class}`)}${p.stats.captain?' · Captain':''}${miiNote}${hands}</span></span></button></td>${cells}<td>${used.has(p.id)?`<span class="small">${escape(draft.names[used.get(p.id)])}</span>`:`<button class="pick-button" data-pick="${p.id}" ${!turn?'disabled':''} aria-label="Pick ${p.miiColorRow?'a ':''}${escape(p.name)}${turn?` for ${escape(draft.names[turn.team])}`:''}">Pick +</button>`}</td></tr>`;
   }).join('')||`<tr><td colspan="${shown.length+1}" class="empty-state">No players match these filters. Try a different name or <button class="text-button" data-clear-filters>clear the filters</button>.</td></tr>`;
 }
 function renderColumnOptions() {
@@ -216,32 +279,61 @@ function renderDraft() {
   $('on-clock').textContent=!draft?'The board is yours.':turn?`${draft.names[turn.team]} is on the clock.`:'The teams are set.';
   $('draft-subtitle').textContent=!draft?'Apply your code, compare the roster, and make your picks.':turn?'Choose a player from the pool to add them to this team.':`${total} players drafted across ${draft.names.length} teams. Inspect any player to review their stats.`;
   $('turn-badge').textContent=!draft?'Choose your teams above':turn?`${draft.picks.length} / ${total} picked`:`${draft.names.length} full rosters`;
-  $('setup-note').textContent=`${$('roster-size').value} rounds. ${$('draft-order').value==='snake'?'The pick order reverses each round.':'Teams pick in the same order each round.'} ${eligible().length} players in the pool.`;
+  const characterCount=roster.filter(p=>p.playable&&p.kind!=='mii').length;
+  $('setup-note').textContent=`${$('roster-size').value} rounds. ${$('draft-order').value==='snake'?'The pick order reverses each round.':'Teams pick in the same order each round.'} ${characterCount} characters${$('include-miis').checked?` and ${miiColorRows().length} Mii colors, each draftable any number of times,`:''} in the pool.`;
   if(!draft){$('team-rosters').innerHTML='<div class="empty-rosters"><span class="empty-number">09</span><h3>Every pick counts.</h3><p>Your teams and their chemistry will appear here when the draft begins.</p></div>';return;}
   $('team-rosters').innerHTML=draft.names.map((name,index)=>{
     const picks=draft.picks.filter(p=>p.team===index);
     const chem=teamChemistry(picks.map(p=>roster[p.id]));
-    return `<section class="team-card${turn?.team===index?' active':''}"><div class="team-title"><h3>${escape(name)}</h3><span>${picks.length} / ${draft.rosterSize}</span></div>${picks.length?`<ol class="team-players">${picks.map((pick,n)=>`<li><button data-inspect="${pick.id}"><span class="pick-index">${n+1}.</span>${portrait(roster[pick.id],'team-portrait')}${escape(roster[pick.id].name)}</button><span class="small muted">#${pick.pick}</span></li>`).join('')}</ol>`:'<p class="empty-team">Waiting for the first pick.</p>'}<div class="team-meta" title="Directional chemistry links between different teammates; reciprocal relationships count twice."><span class="positive">${chem.good} good links</span><span class="negative">${chem.bad} bad links</span></div></section>`;
+    return `<section class="team-card${turn?.team===index?' active':''}"><div class="team-title"><h3>${escape(name)}</h3><span>${picks.length} / ${draft.rosterSize}</span></div>${picks.length?`<ol class="team-players">${picks.map((pick,n)=>{
+      const p=roster[pick.id];
+      const label=pick.name?`<span>${escape(pick.name)}<span class="pick-meta">${escape(miiColorOf(p))} Mii · ${miiGenderOf(p)}</span></span>`:`<span>${escape(p.name)}</span>`;
+      return `<li><button data-inspect="${pick.id}" data-pick-number="${pick.pick}"><span class="pick-index">${n+1}.</span>${portrait(p,'team-portrait')}${label}</button><span class="small muted">#${pick.pick}</span></li>`;
+    }).join('')}</ol>`:'<p class="empty-team">Waiting for the first pick.</p>'}<div class="team-meta" title="Directional chemistry links between different teammates; reciprocal relationships count twice."><span class="positive">${chem.good} good links</span><span class="negative">${chem.bad} bad links</span></div></section>`;
   }).join('');
 }
 function render() {
   if(!model)return;
   renderReport();renderDraft();updateFilterPanel();renderTable();
 }
-function inspectPlayer(id) {
+/** pickNumber identifies a drafted Mii so the inspector can show its league name; a Mii from the pool shows its color. */
+function inspectPlayer(id,{pickNumber=null}={}) {
   const p=roster.find(p=>p.id===id&&p.playable);
   if(!p)throw new Error('Player not found.');
   selectedId=id;
-  $('player-detail-title').textContent=p.name;
+  const isMii=p.kind==='mii';
+  const miiPick=isMii&&pickNumber!=null?draft?.picks.find(pick=>pick.pick===pickNumber&&pick.id===id):null;
+  const colorView=isMii&&!miiPick?miiColorRows().find(row=>miiColorOf(row)===miiColorOf(p)):null;
+  $('player-detail-title').textContent=miiPick?.name??(isMii?`${miiColorOf(p)} Mii`:p.name);
   $('player-detail-portrait').innerHTML=portrait(p,'detail-portrait','sideprofile-right');
-  const hand=key=>formatStat(model.fields.find(f=>f.key===key),p.stats[key]);
-  $('player-detail-class').textContent=`${classNames[p.stats.class]||`Class ${p.stats.class}`}${p.stats.captain?' · Captain':''} · Bats ${hand('battingArm')} · Throws ${hand('pitchingArm')} · ${p.changes.length} stat change${p.changes.length===1?'':'s'}`;
+  const field=key=>model.fields.find(f=>f.key===key);
+  const hand=key=>colorView&&slotValues(colorView,key)?colorView.variants.map(v=>`${formatStat(field(key),v.stats[key])} (${miiGenderOf(v).toLowerCase()})`).join(' / '):formatStat(field(key),p.stats[key]);
+  const identity=miiPick?`${miiColorOf(p)} Mii · ${miiGenderOf(p)}`:`${classNames[p.stats.class]||`Class ${p.stats.class}`}${p.stats.captain?' · Captain':''}${colorView?' · Unlimited':''}`;
+  $('player-detail-class').textContent=`${identity} · Bats ${hand('battingArm')} · Throws ${hand('pitchingArm')} · ${p.changes.length} stat change${p.changes.length===1?'':'s'}`;
   const original=model.vanilla[id];
-  const statRow=f=>`<div class="detail-stat${p.stats[f.key]!==original.stats[f.key]?' changed':''}"><span>${escape(columns.find(c=>c.id===f.key)?.label??f.label)}</span><span>${p.stats[f.key]!==original.stats[f.key]?`<span class="small muted">${escape(formatStat(f,original.stats[f.key]))} → </span>`:''}${escape(formatStat(f,p.stats[f.key]))}</span></div>`;
-  const chemTags=value=>roster.filter(q=>q.playable&&p.chemistry[q.id]===value).map(q=>`<span class="chem-tag${value===0?' bad':''}">${escape(q.name)}${q.id===p.id?' (self)':''}${p.chemistryChanges.some(c=>c.id===q.id)?' ◆':''}</span>`).join('')||'<span class="small muted">None</span>';
-  const drafted=draft?.picks.find(p=>p.id===id);
+  const statRow=f=>{
+    if(colorView&&slotValues(colorView,f.key))return `<div class="detail-stat"><span>${escape(columns.find(c=>c.id===f.key)?.label??f.label)}</span><span>${escape(hand(f.key))}</span></div>`;
+    return `<div class="detail-stat${p.stats[f.key]!==original.stats[f.key]?' changed':''}"><span>${escape(columns.find(c=>c.id===f.key)?.label??f.label)}</span><span>${p.stats[f.key]!==original.stats[f.key]?`<span class="small muted">${escape(formatStat(f,original.stats[f.key]))} → </span>`:''}${escape(formatStat(f,p.stats[f.key]))}</span></div>`;
+  };
+  // Both slots of a Mii color usually share a relationship, so list the color once unless they differ.
+  const chemTags=value=>{
+    const tags=[],listed=new Set();
+    for(const q of roster.filter(q=>q.playable&&p.chemistry[q.id]===value)) {
+      const changed=p.chemistryChanges.some(c=>c.id===q.id)?' ◆':'';
+      if(q.kind!=='mii'){tags.push(`${escape(q.name)}${q.id===p.id?' (self)':''}${changed}`);continue;}
+      const color=miiColorOf(q);
+      const pair=roster.filter(r=>r.kind==='mii'&&miiColorOf(r)===color);
+      if(pair.every(r=>p.chemistry[r.id]===value)){
+        if(listed.has(color))continue;
+        listed.add(color);
+        tags.push(`${escape(color)} Mii${pair.some(r=>p.chemistryChanges.some(c=>c.id===r.id))?' ◆':''}`);
+      } else tags.push(`${escape(color)} Mii (${miiGenderOf(q).toLowerCase()})${changed}`);
+    }
+    return tags.map(tag=>`<span class="chem-tag${value===0?' bad':''}">${tag}</span>`).join('')||'<span class="small muted">None</span>';
+  };
+  const drafted=isMii?miiPick:draft?.picks.find(p=>p.id===id);
   const turn=currentTurn(draft);
-  $('player-detail-body').innerHTML=`<div class="detail-highlights">${[['displayBatting','Batting'],['displayPitching','Pitching'],['displayFielding','Fielding'],['displaySpeed','Running']].map(([key,label])=>`<div class="detail-highlight"><b>${p.stats[key]}</b><span>${label} / 10</span>${delta(p.stats[key],original.stats[key])}</div>`).join('')}</div><p class="small muted">Highlighted values show vanilla → patched. Displayed ratings are separate from the raw stats below.</p><div class="detail-grid">${model.fields.filter(f=>!f.source).map(statRow).join('')}</div><details class="methodology"><summary>Size, catch range and pitch timing</summary><div class="detail-grid">${model.fields.filter(f=>f.source).map(statRow).join('')}</div></details><section class="chem-section"><h3>Chemistry toward other players</h3><p>◆ Changed by this patch. Direction matters; the other player's relationship may differ.</p><h4 class="chem-heading">Good chemistry</h4><div class="chem-tags">${chemTags(2)}</div><h4 class="chem-heading">Bad chemistry</h4><div class="chem-tags">${chemTags(0)}</div>${p.chemistryChanges.length?`<details><summary class="small">All ${p.chemistryChanges.length} chemistry changes</summary><ul class="change-list">${p.chemistryChanges.map(c=>`<li>${escape(roster[c.id].name)}: ${escape(['Bad','Neutral','Good'][c.from]??c.from)} → ${escape(['Bad','Neutral','Good'][c.to]??`Unknown (${c.to})`)}</li>`).join('')}</ul></details>`:''}</section><div class="detail-actions"><span>${drafted?`Drafted by ${escape(draft.names[drafted.team])}`:turn?`Next pick: ${escape(draft.names[turn.team])}`:draft?'The draft is complete.':'Start the draft to pick this player.'}</span><button class="primary" data-pick="${id}" ${drafted||!turn||!draft.playerIds.includes(id)?'disabled':''}>Draft player</button></div>`;
+  $('player-detail-body').innerHTML=`<div class="detail-highlights">${[['displayBatting','Batting'],['displayPitching','Pitching'],['displayFielding','Fielding'],['displaySpeed','Running']].map(([key,label])=>`<div class="detail-highlight"><b>${p.stats[key]}</b><span>${label} / 10</span>${delta(p.stats[key],original.stats[key])}</div>`).join('')}</div><p class="small muted">Highlighted values show vanilla → patched. Displayed ratings are separate from the raw stats below.</p><div class="detail-grid">${model.fields.filter(f=>!f.source).map(statRow).join('')}</div><details class="methodology"><summary>Size, catch range and pitch timing</summary><div class="detail-grid">${model.fields.filter(f=>f.source).map(statRow).join('')}</div></details><section class="chem-section"><h3>Chemistry toward other players</h3><p>◆ Changed by this patch. Direction matters; the other player's relationship may differ.</p><h4 class="chem-heading">Good chemistry</h4><div class="chem-tags">${chemTags(2)}</div><h4 class="chem-heading">Bad chemistry</h4><div class="chem-tags">${chemTags(0)}</div>${p.chemistryChanges.length?`<details><summary class="small">All ${p.chemistryChanges.length} chemistry changes</summary><ul class="change-list">${p.chemistryChanges.map(c=>`<li>${escape(roster[c.id].name)}: ${escape(['Bad','Neutral','Good'][c.from]??c.from)} → ${escape(['Bad','Neutral','Good'][c.to]??`Unknown (${c.to})`)}</li>`).join('')}</ul></details>`:''}</section><div class="detail-actions"><span>${drafted?`Drafted by ${escape(draft.names[drafted.team])}${isMii?` in round ${drafted.round}`:''}`:turn?`Next pick: ${escape(draft.names[turn.team])}`:draft?'The draft is complete.':'Start the draft to pick this player.'}</span><button class="primary" data-pick="${id}" ${(!isMii&&drafted)||!turn||!draft.playerIds.includes(id)?'disabled':''}>${isMii?`Draft a${miiPick?'nother':''} ${escape(miiColorOf(p))} Mii`:'Draft player'}</button></div>`;
   if(!$('player-dialog').open)$('player-dialog').showModal();
   return p;
 }
@@ -291,14 +383,20 @@ $('confirm-cancel').addEventListener('click',()=>{pendingConfirm=null;$('confirm
 $('confirm-dialog').addEventListener('cancel',()=>{pendingConfirm=null;});
 $('confirm-accept').addEventListener('click',safe(()=>{const action=pendingConfirm;pendingConfirm=null;$('confirm-dialog').close();action?.();}));
 $('close-detail').addEventListener('click',()=>$('player-dialog').close());
+$('mii-form').addEventListener('submit',submitMii);
+for(const id of ['mii-cancel','mii-close'])$(id).addEventListener('click',()=>{miiPending=null;$('mii-dialog').close();});
+$('mii-dialog').addEventListener('close',()=>{miiPending=null;});
+$('mii-name').maxLength=MII_NAME_MAX;
 document.addEventListener('click',safe(event=>{
   const clear=event.target.closest('[data-clear-filters]');
   if(clear){clearFilters();if(!clear.isConnected)$('search').focus();return;}
-  const inspect=event.target.closest('[data-inspect]');if(inspect)inspectPlayer(Number(inspect.dataset.inspect));
+  const inspect=event.target.closest('[data-inspect]');
+  if(inspect)inspectPlayer(Number(inspect.dataset.inspect),{pickNumber:inspect.dataset.pickNumber?Number(inspect.dataset.pickNumber):null});
   const pick=event.target.closest('[data-pick]');
   if(pick&&!pick.disabled){
     // Re-rendering replaces the pool rows, so keep keyboard focus at the same row position.
     const row=[...$('player-table').rows].findIndex(r=>r.querySelector(`[data-inspect="${pick.dataset.pick}"]`));
+    if(isMiiSlot(Number(pick.dataset.pick))){openMiiDialog(Number(pick.dataset.pick),row);return;}
     doPick(Number(pick.dataset.pick));
     if(row>=0){
       const rows=$('player-table').rows,next=rows[Math.min(row,rows.length-1)];
@@ -315,7 +413,7 @@ function registerTools(){
   const definitions=[
     {name:'read_draft_room',description:'Read the active patch, draft turn and team rosters. Code in the loader is not automatically applied.',inputSchema:{type:'object',properties:{},additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:true},execute:()=>({activePatch:ready?activeName:null,pendingCode:!!$('gecko-code').value.trim()&&$('gecko-code').value!==activeCode,turn:currentTurn(draft),draft})},
     {name:'inspect_draft_player',description:'Open a player inspector and read their current stats, changes and directional chemistry.',inputSchema:{type:'object',properties:{playerId:{type:'integer'}},required:['playerId'],additionalProperties:false},annotations:{readOnlyHint:true,untrustedContentHint:false},execute:input=>{if(!Number.isInteger(input?.playerId))throw new Error('playerId must be an integer.');return inspectPlayer(input.playerId);}},
-    {name:'draft_player',description:'Complete one pick for the team currently on the clock, using the applied roster. A draft must already be started.',inputSchema:{type:'object',properties:{playerId:{type:'integer'}},required:['playerId'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:input=>{if(!Number.isInteger(input?.playerId))throw new Error('playerId must be an integer.');return doPick(input.playerId);}},
+    {name:'draft_player',description:'Complete one pick for the team currently on the clock, using the applied roster. A draft must already be started. Miis can be drafted any number of times and need miiName: use the Mii color\'s male slot (bats right) or female slot (bats left) as playerId.',inputSchema:{type:'object',properties:{playerId:{type:'integer'},miiName:{type:'string',maxLength:MII_NAME_MAX}},required:['playerId'],additionalProperties:false},annotations:{readOnlyHint:false,untrustedContentHint:true},execute:input=>{if(!Number.isInteger(input?.playerId))throw new Error('playerId must be an integer.');return doPick(input.playerId,{name:input.miiName});}},
   ];
   for(const definition of definitions){try{Promise.resolve(context.registerTool(definition,{signal:lifecycle.signal})).catch(()=>{});}catch{}}
   window.addEventListener('pagehide',()=>lifecycle.abort(),{once:true});
