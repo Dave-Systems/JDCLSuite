@@ -100,11 +100,11 @@ Do not enable another generated stat patch alongside Par Patch v1.13; overlappin
 
 ## Installation
 
-Close Dolphin before replacing any file, and back up your existing files first.
+On Windows, the Dolphin user folder is `%APPDATA%\Dolphin Emulator` (`C:\Users\<you>\AppData\Roaming\Dolphin Emulator`). Close Dolphin before replacing any file, and back up your existing files first.
 
-- Dolphin game settings: copy [`RMBE01.ini`](Dolphin/GameSettings/RMBE01.ini) to `Dolphin Emulator/GameSettings/RMBE01.ini`.
-- Mario Super Sluggers save: copy [`gamedata`](Dolphin/Wii/title/00010000/524d4245/data/gamedata) to `Dolphin Emulator/Wii/title/00010000/524d4245/data/gamedata`.
-- Mii database: copy [`RFL_DB.dat`](Dolphin/Wii/shared2/menu/FaceLib/RFL_DB.dat) to `Dolphin Emulator/Wii/shared2/menu/FaceLib/RFL_DB.dat`.
+- Dolphin game settings: copy [`RMBE01.ini`](Dolphin/GameSettings/RMBE01.ini) to `%APPDATA%\Dolphin Emulator\GameSettings\RMBE01.ini`.
+- Mario Super Sluggers save: copy [`gamedata`](Dolphin/Wii/title/00010000/524d4245/data/gamedata) to `%APPDATA%\Dolphin Emulator\Wii\title\00010000\524d4245\data\gamedata`.
+- Mii database: copy [`RFL_DB.dat`](Dolphin/Wii/shared2/menu/FaceLib/RFL_DB.dat) to `%APPDATA%\Dolphin Emulator\Wii\shared2\menu\FaceLib\RFL_DB.dat`.
 - Stat Editor: place [`ParPatchv113.txt`](Stat-Editor/Gecko-Codes/ParPatchv113.txt) in the editor's `Gecko Codes` folder and load `ParPatchv113`.
 
 `RFL_DB.dat` is JDCL's Mii collection. Copying it replaces the destination's entire Mii database, not one Mii.
