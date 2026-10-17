@@ -8,13 +8,18 @@ Player identity starts as (team, name, primary position). After all games are
 in, batting rows for the same name on a team are compressed into one row when
 their combined games do not exceed that team's games (a player who moved).
 Two of the same name who overlap stay split by position.
+
+Pitchers are one row per (team, name), except names that more than one player
+on a team carried in the same game (every Mii of one color shares a name). Those
+are split by the primary position of the lineup row each one pitched from, for
+example "Brown Mii (M) [P]" and "Brown Mii (M) [SS]".
 """
 
 from __future__ import annotations
 
 import argparse
 import re
-from collections import defaultdict
+from collections import Counter, defaultdict
 from datetime import datetime
 from pathlib import Path
 
@@ -296,9 +301,44 @@ def _compress_batting(
     return compressed
 
 
+def _shared_names(games: list[dict[str, object]]) -> set[tuple[str, str]]:
+    """(team, name) pairs that more than one player on a team carried in the same game."""
+    shared: set[tuple[str, str]] = set()
+    for game in games:
+        for rows in (game["batters"], game["pitchers"]):
+            counts = Counter((row["team"], row["player"]) for row in rows)
+            shared.update(key for key, n in counts.items() if n > 1)
+    return shared
+
+
+def _assign_pitcher_positions(batters: list[dict], pitchers: list[dict]) -> None:
+    """Give each pitcher in one game the primary position of the lineup row they pitched from.
+
+    The Pitching sheet has no position column, and two Miis of one color can both pitch in a
+    game under the same name. The Stats sheet lists each player's positions in order: the one
+    who started on the mound reads "P, 1B" and a reliever reads "SS, P". Pitching rows are in
+    the order the pitchers came in, so the starter comes first, then relievers in sheet order.
+    """
+    pitched_from: dict[tuple[str, str], list[list[str]]] = defaultdict(list)
+    for batter in batters:
+        positions = [p.strip() for p in str(batter.get("positions") or "").split(",") if p.strip()]
+        if "P" in positions:
+            pitched_from[(batter["team"], batter["player"])].append(positions)
+    for rows in pitched_from.values():
+        rows.sort(key=lambda positions: positions[0] != "P")
+    seen: dict[tuple[str, str], int] = defaultdict(int)
+    for pitcher in pitchers:
+        key = (pitcher["team"], pitcher["player"])
+        rows = pitched_from.get(key, [])
+        index = seen[key]
+        seen[key] += 1
+        pitcher["position"] = rows[index][0] if index < len(rows) else ""
+
+
 def compile_league(games: list[dict[str, object]]) -> dict[str, object]:
     batting: dict[tuple[str, str, str], dict] = {}
-    pitching: dict[tuple[str, str], dict] = {}
+    pitching: dict[tuple[str, str, str], dict] = {}
+    shared = _shared_names(games)
     standings: dict[str, dict] = defaultdict(lambda: {
         "team": "", "games": 0, "wins": 0, "losses": 0, "ties": 0,
         "runs_for": 0, "runs_against": 0,
@@ -356,17 +396,27 @@ def compile_league(games: list[dict[str, object]]) -> dict[str, object]:
             for stat, value in batter["counts"].items():
                 slot["counts"][stat] += value
 
+        _assign_pitcher_positions(game["batters"], game["pitchers"])
         for pitcher in game["pitchers"]:
-            key = (pitcher["team"], pitcher["player"])
+            name = (pitcher["team"], pitcher["player"])
+            position = pitcher.get("position", "") if name in shared else ""
+            key = (pitcher["team"], pitcher["player"], position)
             slot = pitching.setdefault(key, {
                 "team": pitcher["team"],
                 "player": pitcher["player"],
+                "position": position,
                 "games": 0,
                 "counts": defaultdict(float),
             })
             slot["games"] += 1
             for stat, value in pitcher["counts"].items():
                 slot["counts"][stat] += value
+
+    # A shared name that split into several pitchers gets its position in the label.
+    rows_per_name = Counter((slot["team"], slot["player"]) for slot in pitching.values())
+    for slot in pitching.values():
+        if rows_per_name[(slot["team"], slot["player"])] > 1:
+            slot["player"] = f'{slot["player"]} [{slot["position"] or "?"}]'
 
     batting = _compress_batting(batting, _games_by_team(games))
 
@@ -478,11 +528,12 @@ def write_workbook(compiled: dict[str, object], dest: Path, source_count: int) -
     cover["B4"] = len(compiled["standings"])
     cover["A5"] = "Batters (team + name + position)"
     cover["B5"] = len(compiled["batting"])
-    cover["A6"] = "Pitchers (team + name)"
+    cover["A6"] = "Pitchers (team + name; shared Mii names by position)"
     cover["B6"] = len(compiled["pitching"])
     cover["A8"] = (
         "Rates are recomputed from summed counting stats. "
-        "Position movers with the same name are one batting row; overlapping duplicates stay split."
+        "Position movers with the same name are one batting row; overlapping duplicates stay split. "
+        "Miis who share a name and pitch are split by the position they pitched from."
     )
     cover.column_dimensions["A"].width = 42
     cover.column_dimensions["B"].width = 14

@@ -24,4 +24,4 @@ pip install openpyxl
 python league_compile.py "C:\path\to\game-xlsx-folder"
 ```
 
-Python 3.12+. Rates are recomputed from summed counting stats. Same-name players who moved positions compress into one batting row; two of the same name who overlap stay split by primary position.
+Python 3.12+. Rates are recomputed from summed counting stats. Same-name players who moved positions compress into one batting row; two of the same name who overlap stay split by primary position. Pitchers are one row per name, except Miis that share a name (every Mii of one color does): those are split by the position they pitched from, such as `Brown Mii (M) [P]`.
