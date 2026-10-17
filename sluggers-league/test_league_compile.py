@@ -1,7 +1,10 @@
+import tempfile
 import unittest
 from pathlib import Path
 
-from league_compile import BATTING_SUM, PITCHING_SUM, compile_league
+from openpyxl import load_workbook
+
+from league_compile import BATTING_COLUMNS, BATTING_SUM, PITCHING_COLUMNS, PITCHING_SUM, compile_league, write_workbook
 
 
 def _counts(**overrides):
@@ -108,6 +111,38 @@ class PitcherIdentityTest(unittest.TestCase):
         ])
         rows = [row["player"] for row in compiled["pitching"]]
         self.assertEqual(rows, [green])
+
+
+class OutputColumnsTest(unittest.TestCase):
+    HELPERS = {"Star Bases Helper", "At-Bats Against Helper", "Total Bases Allowed Helper"}
+
+    def test_every_tracked_play_has_a_column(self):
+        self.assertEqual(set(BATTING_SUM) - self.HELPERS - {key for _, key in BATTING_COLUMNS}, set())
+        self.assertEqual(set(PITCHING_SUM) - self.HELPERS - {key for _, key in PITCHING_COLUMNS}, set())
+
+    def test_workbook_columns_and_frozen_names(self):
+        samus = "Samus Aran (Blue, F)"
+        compiled = compile_league([
+            _game(
+                [_batter("Knights", samus, "1B", Hits=2, Singles=1, RBI=4,
+                         **{"Home Runs": 1, "Grand Slams": 1, "At-Bats": 4, "Plate Appearances": 4})],
+                "g1.xlsx",
+                [_pitcher("Knights", samus, 7.0)],
+            ),
+        ])
+        with tempfile.TemporaryDirectory() as tmp:
+            dest = Path(tmp) / "league.xlsx"
+            write_workbook(compiled, dest, 1)
+            wb = load_workbook(dest)
+            bat, pit = wb["Batting"], wb["Pitching"]
+            bat_headers = [c.value for c in bat[1]]
+            self.assertEqual(bat_headers, [h for h, _ in BATTING_COLUMNS])
+            row = dict(zip(bat_headers, [c.value for c in bat[2]]))
+            self.assertEqual((row["H"], row["1B"], row["HR"], row["GS"], row["Solo HR"]), (2, 1, 1, 1, 0))
+            self.assertEqual([c.value for c in pit[1]], [h for h, _ in PITCHING_COLUMNS])
+            self.assertEqual((bat.freeze_panes, pit.freeze_panes, wb["Standings"].freeze_panes), ("C2", "C2", "A2"))
+            self.assertGreater(bat.column_dimensions["B"].width, len(samus))
+            self.assertGreater(pit.column_dimensions["B"].width, len(samus))
 
 
 if __name__ == "__main__":

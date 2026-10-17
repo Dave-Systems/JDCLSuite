@@ -24,4 +24,4 @@ pip install openpyxl
 python league_compile.py "C:\path\to\game-xlsx-folder"
 ```
 
-Python 3.12+. Rates are recomputed from summed counting stats. Same-name players who moved positions compress into one batting row; two of the same name who overlap stay split by primary position. Pitchers are one row per name, except Miis that share a name (every Mii of one color does): those are split by the position they pitched from, such as `Brown Mii (M) [P]`.
+Python 3.12+. Rates are recomputed from summed counting stats. Batting and Pitching have a column for every play the tracker counts, such as home runs split into solo, 2-run, 3-run and grand slams, and Team and Player stay frozen while you scroll. Same-name players who moved positions compress into one batting row; two of the same name who overlap stay split by primary position. Pitchers are one row per name, except Miis that share a name (every Mii of one color does): those are split by the position they pitched from, such as `Brown Mii (M) [P]`.

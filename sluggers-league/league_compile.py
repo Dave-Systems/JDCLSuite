@@ -94,6 +94,32 @@ PITCHING_SUM = [
     "Total Bases Allowed Helper",
 ]
 
+# Output columns as (header, field). Helpers behind the rates (Star Bases, At-Bats Against,
+# Total Bases Allowed) stay out; every play the tracker counts is in.
+BATTING_COLUMNS = [
+    ("Team", "team"), ("Player", "player"), ("Pos", "position"), ("G", "games"),
+    ("PA", "Plate Appearances"), ("AB", "At-Bats"), ("R", "Runs"), ("H", "Hits"),
+    ("1B", "Singles"), ("2B", "Doubles"), ("3B", "Triples"), ("HR", "Home Runs"),
+    ("Solo HR", "1HR"), ("2-Run HR", "2HR"), ("3-Run HR", "3HR"), ("GS", "Grand Slams"), ("ITP HR", "ITP Home Runs"),
+    ("RBI", "RBI"), ("BB", "Walks"), ("HBP", "Hit By Pitch"), ("SO", "Strikeouts"), ("TB", "Total Bases"),
+    ("AVG", "Batting Average"), ("OBP", "On Base %"), ("SLG", "Slug %"), ("OPS", "On Base + Slug"), ("Star SLG", "Star Slug %"),
+    ("SF", "Sac Flys"), ("GIDP", "Double Plays Hit Into"), ("TP into", "Triple Plays Hit Into"), ("BJ into", "Buddy Jumps Hit Into"),
+    ("SB", "Stolen Bases"), ("CS", "Caught Stealing"), ("SB Att", "Steal Attempts"),
+    ("Star Swings", "Star Swings"), ("Star Hits", "Star Hits"), ("Stars Used", "Stars Used"),
+    ("PO", "Putouts"), ("A", "Assists"), ("DP", "Double Plays"), ("TP", "Triple Plays"),
+    ("BJ PO", "Buddy Jump Putouts"), ("BJ Att", "Buddy Jump Attempts"), ("Bobbles", "Bobbles"),
+]
+PITCHING_COLUMNS = [
+    ("Team", "team"), ("Player", "player"), ("G", "games"), ("IP", "Innings Pitched"), ("BF", "Batters Faced"),
+    ("Pitches", "Pitches"), ("Strikes", "Strikes"), ("Balls", "Balls"),
+    ("K", "Strikeouts"), ("BB", "Walks"), ("HBP", "Bean Balls"),
+    ("H", "Hits Allowed"), ("1B Alw", "Singles Allowed"), ("2B Alw", "Doubles Allowed"), ("3B Alw", "Triples Allowed"), ("HR", "HR Allowed"),
+    ("R", "Runs Allowed"), ("ER", "Earned Runs"), ("Inh R", "Inherited Runs"),
+    ("ERA-7", "ERA-7"), ("ERA-9", "ERA-9"), ("WHIP", "WHIP"),
+    ("BAA", "BA Against"), ("OBP-A", "OB% Against"), ("SLG-A", "SLG Against"), ("OPS-A", "OPS Against"),
+    ("Star Pitches", "Star Pitches"), ("Stars Used", "Stars Used"), ("Pickoffs", "Pickoffs"), ("PK Att", "Pickoff Attempts"),
+]
+
 HEADER_FILL = PatternFill("solid", fgColor="1F4E79")
 HEADER_FONT = Font(bold=True, color="FFFFFF")
 ALT_FILL = PatternFill("solid", fgColor="D6EAF8")
@@ -478,8 +504,8 @@ def compile_league(games: list[dict[str, object]]) -> dict[str, object]:
     }
 
 
-def _style_header(ws, width: int) -> None:
-    ws.freeze_panes = "A2"
+def _style_header(ws, width: int, freeze: str = "A2") -> None:
+    ws.freeze_panes = freeze
     ws.auto_filter.ref = f"A1:{get_column_letter(width)}{ws.max_row}"
     for col in range(1, width + 1):
         cell = ws.cell(1, col)
@@ -488,7 +514,15 @@ def _style_header(ws, width: int) -> None:
         cell.alignment = Alignment(horizontal="center")
 
 
-def _write_sheet(ws, headers: list[str], rows: list[list], pct_cols: set[int], int_cols: set[int], rate_cols: set[int]) -> None:
+def _format_sets(headers: list[str], pct: set[str], rate: set[str], text: set[str]) -> tuple[set[int], set[int], set[int]]:
+    """Column numbers (1-based) for 0.000 rates, whole numbers and 0.00 rates, chosen by header name."""
+    pct_cols = {i for i, h in enumerate(headers, 1) if h in pct}
+    rate_cols = {i for i, h in enumerate(headers, 1) if h in rate}
+    int_cols = {i for i, h in enumerate(headers, 1) if h not in pct | rate | text}
+    return pct_cols, int_cols, rate_cols
+
+
+def _write_sheet(ws, headers: list[str], rows: list[list], pct_cols: set[int], int_cols: set[int], rate_cols: set[int], freeze: str = "A2") -> None:
     for col, header in enumerate(headers, 1):
         ws.cell(1, col, header)
     for r_i, row in enumerate(rows, 2):
@@ -508,11 +542,13 @@ def _write_sheet(ws, headers: list[str], rows: list[list], pct_cols: set[int], i
                 cell.value = int(round(value))
             elif isinstance(value, float):
                 cell.number_format = "0.00"
-    _style_header(ws, len(headers))
+    _style_header(ws, len(headers), freeze)
     for col in range(1, len(headers) + 1):
         header = headers[col - 1]
-        width = max(len(header) + 2, 12)
-        ws.column_dimensions[get_column_letter(col)].width = min(width, 28)
+        # Text columns grow to their longest value so names like "Rosalina (Light Blue, F)" are not cut off.
+        longest = max((len(row[col - 1]) for row in rows if isinstance(row[col - 1], str)), default=0)
+        width = max(len(header) + 2, longest + 2, 12)
+        ws.column_dimensions[get_column_letter(col)].width = min(width, 40)
 
 
 def write_workbook(compiled: dict[str, object], dest: Path, source_count: int) -> None:
@@ -546,57 +582,29 @@ def write_workbook(compiled: dict[str, object], dest: Path, source_count: int) -
     stand = wb.create_sheet("Standings")
     _write_sheet(stand, stand_headers, stand_rows, {6}, {2, 3, 4, 5, 7, 8, 9}, set())
 
-    bat_headers = [
-        "Team", "Player", "Pos", "G",
-        "PA", "AB", "R", "H", "2B", "3B", "HR", "RBI", "BB", "HBP", "SO", "TB",
-        "AVG", "OBP", "SLG", "OPS", "Star SLG",
-        "SF", "GIDP", "BJ into", "SB", "CS",
-        "Star Swings", "Star Hits", "Stars Used",
-        "PO", "A", "DP", "Bobbles",
-    ]
-    bat_rows = []
-    for r in compiled["batting"]:
-        bat_rows.append([
-            r["team"], r["player"], r["position"], r["games"],
-            r["Plate Appearances"], r["At-Bats"], r["Runs"], r["Hits"], r["Doubles"], r["Triples"], r["Home Runs"],
-            r["RBI"], r["Walks"], r["Hit By Pitch"], r["Strikeouts"], r["Total Bases"],
-            r["Batting Average"], r["On Base %"], r["Slug %"], r["On Base + Slug"], r["Star Slug %"],
-            r["Sac Flys"], r["Double Plays Hit Into"], r["Buddy Jumps Hit Into"], r["Stolen Bases"], r["Caught Stealing"],
-            r["Star Swings"], r["Star Hits"], r["Stars Used"],
-            r["Putouts"], r["Assists"], r["Double Plays"], r["Bobbles"],
-        ])
+    # Every play the tracker counts gets a column; each header sits next to the stat it shows.
+    bat_cols = BATTING_COLUMNS
+    bat_headers = [h for h, _ in bat_cols]
+    bat_rows = [[r[key] for _, key in bat_cols] for r in compiled["batting"]]
     batting_sheet = wb.create_sheet("Batting")
     _write_sheet(
         batting_sheet,
         bat_headers,
         bat_rows,
-        {17, 18, 19, 20, 21},
-        {4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31, 32, 33},
-        set(),
+        *_format_sets(bat_headers, pct={"AVG", "OBP", "SLG", "OPS", "Star SLG"}, rate=set(), text={"Team", "Player", "Pos"}),
+        freeze="C2",
     )
 
-    pit_headers = [
-        "Team", "Player", "G", "IP", "BF", "Pitches", "K", "BB", "HBP", "H", "R", "ER", "HR",
-        "ERA-7", "ERA-9", "WHIP", "BAA", "OBP-A", "SLG-A", "OPS-A",
-        "Star Pitches", "Stars Used", "Pickoffs",
-    ]
-    pit_rows = []
-    for r in compiled["pitching"]:
-        pit_rows.append([
-            r["team"], r["player"], r["games"], r["Innings Pitched"], r["Batters Faced"], r["Pitches"],
-            r["Strikeouts"], r["Walks"], r["Bean Balls"], r["Hits Allowed"], r["Runs Allowed"],
-            r["Earned Runs"], r["HR Allowed"],
-            r["ERA-7"], r["ERA-9"], r["WHIP"], r["BA Against"], r["OB% Against"], r["SLG Against"], r["OPS Against"],
-            r["Star Pitches"], r["Stars Used"], r["Pickoffs"],
-        ])
+    pit_cols = PITCHING_COLUMNS
+    pit_headers = [h for h, _ in pit_cols]
+    pit_rows = [[r[key] for _, key in pit_cols] for r in compiled["pitching"]]
     pitching_sheet = wb.create_sheet("Pitching")
     _write_sheet(
         pitching_sheet,
         pit_headers,
         pit_rows,
-        {17, 18, 19, 20},
-        {3, 5, 6, 7, 8, 9, 10, 11, 12, 13, 21, 22, 23},
-        {4, 14, 15, 16},
+        *_format_sets(pit_headers, pct={"BAA", "OBP-A", "SLG-A", "OPS-A"}, rate={"IP", "ERA-7", "ERA-9", "WHIP"}, text={"Team", "Player"}),
+        freeze="C2",
     )
 
     game_headers = ["Played", "Away", "A", "Home", "H", "Stadium", "Innings", "Incomplete", "File"]
