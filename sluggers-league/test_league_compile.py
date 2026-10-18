@@ -120,6 +120,14 @@ class OutputColumnsTest(unittest.TestCase):
         self.assertEqual(set(BATTING_SUM) - self.HELPERS - {key for _, key in BATTING_COLUMNS}, set())
         self.assertEqual(set(PITCHING_SUM) - self.HELPERS - {key for _, key in PITCHING_COLUMNS}, set())
 
+    def test_star_slug_is_per_star_swing(self):
+        compiled = compile_league([
+            _game([_batter("Wilds", "Daisy", "2B", **{"At-Bats": 4, "Star Swings": 2, "Star Bases Helper": 3})], "g1.xlsx"),
+            _game([_batter("Wilds", "Daisy", "2B", **{"At-Bats": 3})], "g2.xlsx"),
+        ])
+        row = next(r for r in compiled["batting"] if r["player"] == "Daisy")
+        self.assertEqual(row["Star Slug %"], 1.5)
+
     def test_workbook_columns_and_frozen_names(self):
         samus = "Samus Aran (Blue, F)"
         compiled = compile_league([

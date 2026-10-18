@@ -458,7 +458,8 @@ def compile_league(games: list[dict[str, object]]) -> dict[str, object]:
             "On Base %": _rate(h + bb + hbp, pa),
             "Slug %": _rate(tb, ab),
             "On Base + Slug": None,
-            "Star Slug %": _rate(c["Star Bases Helper"], ab),
+            # The score cards measure Star Slug % per star swing, not per at-bat.
+            "Star Slug %": _rate(c["Star Bases Helper"], c["Star Swings"]),
         })
         obp = batting_rows[-1]["On Base %"]
         slg = batting_rows[-1]["Slug %"]
